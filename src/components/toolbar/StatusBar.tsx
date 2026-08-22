@@ -97,6 +97,19 @@ export const StatusBar: React.FC = () => {
 
           {/* Right items */}
           <div className="flex items-center gap-3 text-[11px]">
+            {/* Go Live Toggle */}
+            <button
+              type="button"
+              onClick={() => setActiveBottomTab('live-server')}
+              className="flex items-center gap-1 text-[#38bdf8] hover:text-[#7dd3fc] transition-colors cursor-pointer"
+              title="Open Live Web Server Preview"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
+              <span>Go Live</span>
+            </button>
+
+            <span className="text-[#333333]">|</span>
+
             {/* Terminal Quick Toggle */}
             <button
               type="button"

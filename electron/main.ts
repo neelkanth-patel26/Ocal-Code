@@ -458,7 +458,4 @@ app.whenReady().then(async () => {
     await shell.openExternal(url);
     return true;
   });
-
-  // Auto-start live server on ready
-  liveServerManager.start(5500).catch((err) => console.log('Live server auto-start:', err));
 });
