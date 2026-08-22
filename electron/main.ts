@@ -266,65 +266,21 @@ app.whenReady().then(async () => {
   ipcMain.handle('fs:save-file-dialog', async (_, options: { defaultName: string; content: string; language?: string }) => {
     if (!win) return null;
 
-    const ext = path.extname(options.defaultName).toLowerCase().replace(/^\./, '');
-    const lang = options.language?.toLowerCase() || '';
-
-    let filters: Array<{ name: string; extensions: string[] }> = [];
-
-    if (lang === 'html' || ext === 'html' || ext === 'htm') {
-      filters = [
-        { name: 'HTML Web Document (*.html, *.htm)', extensions: ['html', 'htm'] },
-        { name: 'CSS Stylesheet (*.css)', extensions: ['css'] },
-        { name: 'JavaScript (*.js)', extensions: ['js'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    } else if (lang === 'css' || ext === 'css') {
-      filters = [
-        { name: 'CSS Stylesheet (*.css)', extensions: ['css'] },
-        { name: 'HTML Web Document (*.html)', extensions: ['html', 'htm'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    } else if (lang === 'python' || ext === 'py' || ext === 'pyw') {
-      filters = [
-        { name: 'Python Script (*.py, *.pyw)', extensions: ['py', 'pyw'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    } else if (lang === 'java' || ext === 'java') {
-      filters = [
-        { name: 'Java Source File (*.java)', extensions: ['java'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    } else if (lang === 'javascript' || ext === 'js' || ext === 'mjs') {
-      filters = [
-        { name: 'JavaScript File (*.js, *.mjs)', extensions: ['js', 'mjs'] },
-        { name: 'TypeScript File (*.ts)', extensions: ['ts'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    } else if (lang === 'typescript' || ext === 'ts') {
-      filters = [
-        { name: 'TypeScript File (*.ts)', extensions: ['ts'] },
-        { name: 'JavaScript File (*.js)', extensions: ['js'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    } else if (lang === 'react' || lang === 'nextjs' || ext === 'tsx' || ext === 'jsx') {
-      filters = [
-        { name: 'React / Next.js Component (*.tsx, *.jsx)', extensions: ['tsx', 'jsx', 'ts', 'js'] },
-        { name: 'TypeScript File (*.ts)', extensions: ['ts'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    } else if (lang === 'c' || ext === 'c') {
-      filters = [
-        { name: 'C Source Files (*.c, *.h)', extensions: ['c', 'h'] },
-        { name: 'C++ Source Files (*.cpp, *.hpp)', extensions: ['cpp', 'hpp'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    } else {
-      filters = [
-        { name: 'C++ Source Files (*.cpp, *.cxx, *.hpp, *.h)', extensions: ['cpp', 'cxx', 'hpp', 'h'] },
-        { name: 'C Source Files (*.c, *.h)', extensions: ['c', 'h'] },
-        { name: 'All Files (*.*)', extensions: ['*'] },
-      ];
-    }
+    const filters = [
+      { name: 'All Files (*.*)', extensions: ['*'] },
+      { name: 'HTML Web Document (*.html, *.htm)', extensions: ['html', 'htm'] },
+      { name: 'CSS Stylesheet (*.css)', extensions: ['css'] },
+      { name: 'JavaScript (*.js, *.mjs, *.cjs)', extensions: ['js', 'mjs', 'cjs'] },
+      { name: 'TypeScript (*.ts)', extensions: ['ts'] },
+      { name: 'React / Next.js (*.tsx, *.jsx)', extensions: ['tsx', 'jsx'] },
+      { name: 'Python Script (*.py, *.pyw)', extensions: ['py', 'pyw'] },
+      { name: 'Java Source File (*.java)', extensions: ['java'] },
+      { name: 'C++ Source Files (*.cpp, *.hpp, *.cxx)', extensions: ['cpp', 'hpp', 'cxx', 'cc'] },
+      { name: 'C Source Files (*.c, *.h)', extensions: ['c', 'h'] },
+      { name: 'JSON Document (*.json)', extensions: ['json'] },
+      { name: 'Markdown Document (*.md)', extensions: ['md', 'markdown'] },
+      { name: 'Plain Text File (*.txt)', extensions: ['txt', 'log'] },
+    ];
 
     const result = await dialog.showSaveDialog(win, {
       defaultPath: options.defaultName,
@@ -336,9 +292,12 @@ app.whenReady().then(async () => {
     }
 
     await fs.promises.writeFile(result.filePath, options.content, 'utf8');
+    const detectedLang = detectLanguageFromPath(result.filePath);
+
     return {
       path: result.filePath,
       name: path.basename(result.filePath),
+      language: detectedLang,
     };
   });
 

@@ -40,7 +40,8 @@ export interface ElectronAPI {
   }) => Promise<{ success: boolean; assembly?: string; error?: string }>;
 
   openFileDialog: () => Promise<{ path: string; name: string; content: string; language: LanguageTarget } | null>;
-  saveFileDialog: (options: { defaultName: string; content: string; language?: LanguageTarget }) => Promise<{ path: string; name: string } | null>;
+  saveFileDialog: (options: { defaultName: string; content: string; language?: string }) =>
+    Promise<{ path: string; name: string; language?: string } | null>;
   saveFile: (options: { filePath: string; content: string }) => Promise<boolean>;
 
   openFolderDialog: () => Promise<string | null>;

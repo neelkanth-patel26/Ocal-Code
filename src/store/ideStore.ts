@@ -172,7 +172,24 @@ const getDefaultLanguageInfo = (lang: LanguageTarget): { ext: string; content: s
   }
 };
 
-const THEME_STORAGE_KEY = 'ocal_code_theme_preference';
+export const getLanguageFromFileName = (fileName: string): LanguageTarget => {
+  const ext = (fileName.includes('.') ? `.${fileName.split('.').pop()?.toLowerCase()}` : '').toLowerCase();
+  const base = fileName.toLowerCase();
+
+  if (ext === '.json' || base === 'package.json' || base === 'tsconfig.json') return 'json';
+  if (ext === '.md' || ext === '.markdown') return 'markdown';
+  if (ext === '.py' || ext === '.pyw') return 'python';
+  if (ext === '.java') return 'java';
+  if (ext === '.html' || ext === '.htm') return 'html';
+  if (ext === '.css' || ext === '.scss' || ext === '.sass' || ext === '.less') return 'css';
+  if (ext === '.tsx' || ext === '.jsx') return 'react';
+  if (ext === '.ts' || fileName.endsWith('.d.ts')) return 'typescript';
+  if (ext === '.js' || ext === '.mjs' || ext === '.cjs') return 'javascript';
+  if (ext === '.c' || ext === '.h') return 'c';
+  return 'cpp';
+};
+
+export const THEME_STORAGE_KEY = 'ocal_code_theme_preference';
 
 const getInitialTheme = (): ThemeName => {
   try {
@@ -206,15 +223,18 @@ export const useIDEStore = create<IDEState>((set, get) => ({
   },
 
   addNewFile: (name?: string, language?: LanguageTarget, content?: string) => {
-    const lang = language || 'cpp';
-    const langInfo = getDefaultLanguageInfo(lang);
-    const count = get().files.length + 1;
-    const fileName = name || (lang === 'java' ? 'Main.java' : lang === 'html' ? 'index.html' : `source_${count}${langInfo.ext}`);
+    const isGenericNew = !name && !language && content === undefined;
+    const untitledCount = get().files.filter((f) => f.name.startsWith('Untitled')).length + 1;
+    
+    const fileName = name || `Untitled-${untitledCount}`;
+    const lang: LanguageTarget = language || (name ? getLanguageFromFileName(name) : 'cpp');
+    const fileContent = content !== undefined ? content : (isGenericNew ? '' : getDefaultLanguageInfo(lang).content);
+
     const newFile: FileItem = {
-      id: `file-${Date.now()}`,
+      id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       name: fileName,
       language: lang,
-      content: content !== undefined ? content : langInfo.content,
+      content: fileContent,
       isDirty: false,
     };
 
@@ -263,15 +283,16 @@ export const useIDEStore = create<IDEState>((set, get) => ({
         }));
       } else {
         const result = await window.electronAPI.saveFileDialog({
-          defaultName: activeFile.name,
+          defaultName: activeFile.name.startsWith('Untitled') ? '' : activeFile.name,
           content: activeFile.content,
           language: activeFile.language,
         });
         if (result) {
+          const detectedLang = (result.language as LanguageTarget) || getLanguageFromFileName(result.name);
           set((state) => ({
             files: state.files.map((f) =>
               f.id === activeFileId
-                ? { ...f, name: result.name, path: result.path, isDirty: false }
+                ? { ...f, name: result.name, path: result.path, language: detectedLang, isDirty: false }
                 : f
             ),
           }));
