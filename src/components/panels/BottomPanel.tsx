@@ -4,9 +4,23 @@ import { InteractiveTerminal } from '../terminal/InteractiveTerminal';
 import { BuildOutputLog } from './BuildOutputLog';
 import { ProblemsList } from './ProblemsList';
 import { AssemblyViewer } from './AssemblyViewer';
-import { Terminal, ScrollText, AlertCircle, Cpu, ChevronUp, ChevronDown, Maximize2, Minimize2, Globe } from 'lucide-react';
+import {
+  Terminal,
+  ScrollText,
+  AlertCircle,
+  Cpu,
+  ChevronUp,
+  ChevronDown,
+  Maximize2,
+  Minimize2,
+  Globe,
+  RotateCw,
+  Trash2,
+  Square,
+} from 'lucide-react';
 import { BottomTabType } from '../../types/ide';
 import { LiveServerPreview } from '../preview/LiveServerPreview';
+import { useCompiler } from '../../hooks/useCompiler';
 
 export const BottomPanel: React.FC = () => {
   const {
@@ -16,7 +30,11 @@ export const BottomPanel: React.FC = () => {
     theme,
     bottomPanelHeight,
     setBottomPanelHeight,
+    workspacePath,
+    isRunning,
   } = useIDEStore();
+
+  const { killProcess } = useCompiler();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -73,14 +91,33 @@ export const BottomPanel: React.FC = () => {
     if (isCollapsed) setIsCollapsed(false);
   };
 
+  const runQuickCommand = (cmd: string) => {
+    if (window.electronAPI) {
+      window.electronAPI.sendTerminalInput(`${cmd}\r`);
+    }
+  };
+
+  const handleRestartShell = () => {
+    if (window.electronAPI) {
+      window.electronAPI.restartTerminalSession(workspacePath || undefined);
+    }
+  };
+
+  const handleClearTerminal = () => {
+    if (window.electronAPI) {
+      window.electronAPI.writeTerminal('\x1b[2J\x1b[H');
+      window.electronAPI.sendTerminalInput('\f');
+    }
+  };
+
   return (
     <div
       style={{
-        height: isMaximized ? '80vh' : isCollapsed ? '32px' : `${bottomPanelHeight}px`,
+        height: isMaximized ? '85vh' : isCollapsed ? '32px' : `${bottomPanelHeight}px`,
       }}
       className={`flex flex-col border-t relative shrink-0 transition-none z-10 ${
         isTurboTheme
-          ? 'bg-[#000088] border-turbo-cyan/40 text-white'
+          ? 'bg-[#000088] border-[#55FFFF] text-white'
           : isOcalTheme
           ? 'bg-[#0c0c0c] border-[#252536] text-[#e8e8e8]'
           : 'bg-[#181818] border-[#2b2b2b] text-[#cccccc]'
@@ -97,7 +134,7 @@ export const BottomPanel: React.FC = () => {
 
       {/* Header Tabs Strip */}
       <div
-        className={`flex items-center justify-between px-2 h-8 border-b select-none shrink-0 ${
+        className={`flex items-center justify-between px-2.5 h-8 border-b select-none shrink-0 ${
           isTurboTheme
             ? 'bg-[#0000AA] border-[#55FFFF] text-[#55FFFF] font-dos'
             : isOcalTheme
@@ -105,7 +142,8 @@ export const BottomPanel: React.FC = () => {
             : 'bg-[#1f1f1f] border-[#2b2b2b] text-[#858585]'
         }`}
       >
-        <div className="flex items-center gap-1">
+        {/* Left Tabs */}
+        <div className="flex items-center gap-1 h-full">
           {tabs.map((tab) => {
             const isActive = activeBottomTab === tab.id && !isCollapsed;
             return (
@@ -113,20 +151,25 @@ export const BottomPanel: React.FC = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => handleTabClick(tab.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors rounded-t cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 h-full text-xs transition-colors cursor-pointer relative ${
                   isTurboTheme
                     ? isActive
                       ? 'bg-[#000077] text-[#FFFF55] font-bold border-t-2 border-[#55FFFF]'
                       : 'text-[#AAAAAA] hover:text-white hover:bg-[#000088]'
                     : isOcalTheme
                     ? isActive
-                      ? 'text-white border-b-2 border-[#34d058] font-medium bg-[#181920]'
-                      : 'text-[#858585] hover:text-[#e8e8e8] hover:bg-[#15161e]'
+                      ? 'text-white font-medium bg-[#0c0c0c]'
+                      : 'text-[#858585] hover:text-[#e8e8e8] hover:bg-[#181920]'
                     : isActive
-                    ? 'text-white border-b-2 border-[#0078d4] font-medium bg-[#181818]'
+                    ? 'text-white font-medium bg-[#181818]'
                     : 'text-[#858585] hover:text-[#cccccc] hover:bg-[#252525]'
                 }`}
               >
+                {isActive && !isTurboTheme && (
+                  <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                    isOcalTheme ? 'bg-[#34d058]' : 'bg-[#0078d4]'
+                  }`} />
+                )}
                 {tab.icon}
                 <span>{isTurboTheme ? `[ ${tab.label} ]` : tab.label}</span>
                 {tab.badge !== undefined && (
@@ -145,28 +188,89 @@ export const BottomPanel: React.FC = () => {
           })}
         </div>
 
-        {/* Panel Controls (Maximize, Collapse) */}
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={() => setIsMaximized(!isMaximized)}
-            className={`p-1 transition-colors rounded cursor-pointer ${
-              isTurboTheme ? 'text-[#55FFFF] hover:text-[#FFFF55] hover:bg-[#000088]' : 'text-[#858585] hover:text-white hover:bg-[#2a2a2a]'
-            }`}
-            title={isMaximized ? 'Restore Panel' : 'Maximize Panel'}
-          >
-            {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`p-1 transition-colors rounded cursor-pointer ${
-              isTurboTheme ? 'text-[#55FFFF] hover:text-[#FFFF55] hover:bg-[#000088]' : 'text-[#858585] hover:text-white hover:bg-[#2a2a2a]'
-            }`}
-            title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}
-          >
-            {isCollapsed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
+        {/* Right Controls & Quick Actions */}
+        <div className="flex items-center gap-2">
+          {activeBottomTab === 'terminal' && !isCollapsed && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => runQuickCommand('npm run dev')}
+                className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#38bdf8]/10 text-[#38bdf8] hover:bg-[#38bdf8]/20 border border-[#38bdf8]/30 cursor-pointer transition-colors"
+                title="Execute: npm run dev"
+              >
+                npm run dev
+              </button>
+              <button
+                type="button"
+                onClick={() => runQuickCommand('npm start')}
+                className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#34d058]/10 text-[#34d058] hover:bg-[#34d058]/20 border border-[#34d058]/30 cursor-pointer transition-colors"
+                title="Execute: npm start"
+              >
+                npm start
+              </button>
+              <button
+                type="button"
+                onClick={() => runQuickCommand('npm install')}
+                className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer transition-colors"
+                title="Execute: npm install"
+              >
+                npm install
+              </button>
+
+              {isRunning && (
+                <button
+                  type="button"
+                  onClick={killProcess}
+                  className="flex items-center gap-1 px-2 py-0.5 bg-[#f14c4c] hover:bg-[#d83b3b] text-white rounded transition-colors text-[11px] font-medium cursor-pointer"
+                  title="Stop process"
+                >
+                  <Square className="w-3 h-3 fill-current" />
+                  <span>Stop</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleRestartShell}
+                className="p-1 hover:text-white hover:bg-[#252536] rounded transition-colors text-[#858585] cursor-pointer"
+                title="Restart Terminal Session"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearTerminal}
+                className="p-1 hover:text-white hover:bg-[#252536] rounded transition-colors text-[#858585] cursor-pointer"
+                title="Clear Terminal"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-0.5 border-l border-[#252536] pl-1.5">
+            <button
+              type="button"
+              onClick={() => setIsMaximized(!isMaximized)}
+              className={`p-1 transition-colors rounded cursor-pointer ${
+                isTurboTheme ? 'text-[#55FFFF] hover:text-[#FFFF55] hover:bg-[#000088]' : 'text-[#858585] hover:text-white hover:bg-[#252536]'
+              }`}
+              title={isMaximized ? 'Restore Panel' : 'Maximize Panel'}
+            >
+              {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className={`p-1 transition-colors rounded cursor-pointer ${
+                isTurboTheme ? 'text-[#55FFFF] hover:text-[#FFFF55] hover:bg-[#000088]' : 'text-[#858585] hover:text-white hover:bg-[#252536]'
+              }`}
+              title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}
+            >
+              {isCollapsed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
       </div>
 
