@@ -3,21 +3,21 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { useIDEStore } from '../../store/ideStore';
-import { Play, Square, Trash2, CornerDownLeft, Terminal as TerminalIcon, RotateCw, Sparkles, Package } from 'lucide-react';
+import { Play, Square, Trash2, CornerDownLeft, Terminal as TerminalIcon, RotateCw } from 'lucide-react';
 import { useCompiler } from '../../hooks/useCompiler';
 
 export const InteractiveTerminal: React.FC = () => {
   const terminalContainerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const { isRunning, isCompiling, theme, workspacePath } = useIDEStore();
+  const { isRunning, theme, workspacePath } = useIDEStore();
   const { killProcess } = useCompiler();
   const [inputValue, setInputValue] = useState('');
 
   const isTurboTheme = theme === 'turbo-nostalgia';
   const isOcalTheme = theme === 'ocal-signature';
 
-  // Initialize interactive terminal & shell session
+  // Initialize interactive native PTY terminal
   useEffect(() => {
     if (!terminalContainerRef.current) return;
 
@@ -80,113 +80,26 @@ export const InteractiveTerminal: React.FC = () => {
     term.loadAddon(fitAddon);
     term.open(terminalContainerRef.current);
 
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       try {
         fitAddon.fit();
+        if (window.electronAPI && term.cols && term.rows) {
+          window.electronAPI.startTerminalSession(workspacePath || undefined, term.cols, term.rows);
+        }
       } catch {}
     }, 50);
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Start live persistent shell session in workspace directory
-    if (window.electronAPI) {
-      window.electronAPI.startTerminalSession(workspacePath || undefined);
-    }
-
-    // Line buffer and command history for responsive terminal experience
-    const cmdBuffer = { current: '' };
-    const cmdHistory = { list: [] as string[], index: -1 };
-
-    // Keystrokes handling with instant local echo
+    // Real-time direct stream to ConPTY / node-pty
     const disposableOnData = term.onData((data) => {
-      // Enter key -> Execute command
-      if (data === '\r' || data === '\n') {
-        const cmd = cmdBuffer.current;
-        term.write('\r\n');
-        if (window.electronAPI) {
-          window.electronAPI.sendTerminalInput(`${cmd}\r\n`);
-        }
-        if (cmd.trim()) {
-          cmdHistory.list.push(cmd);
-          cmdHistory.index = cmdHistory.list.length;
-        }
-        cmdBuffer.current = '';
-        return;
-      }
-
-      // Backspace
-      if (data === '\x7f' || data === '\b') {
-        if (cmdBuffer.current.length > 0) {
-          cmdBuffer.current = cmdBuffer.current.slice(0, -1);
-          term.write('\b \b');
-        }
-        return;
-      }
-
-      // Ctrl+C -> Cancel line / Kill active task
-      if (data === '\x03') {
-        term.write('^C\r\n');
-        cmdBuffer.current = '';
-        if (window.electronAPI) {
-          window.electronAPI.killTerminalProcess();
-        }
-        return;
-      }
-
-      // Ctrl+L -> Clear
-      if (data === '\x0c') {
-        term.clear();
-        return;
-      }
-
-      // Up Arrow -> History back
-      if (data === '\x1b[A') {
-        if (cmdHistory.list.length > 0 && cmdHistory.index > 0) {
-          cmdHistory.index--;
-          const prev = cmdHistory.list[cmdHistory.index];
-          while (cmdBuffer.current.length > 0) {
-            term.write('\b \b');
-            cmdBuffer.current = cmdBuffer.current.slice(0, -1);
-          }
-          term.write(prev);
-          cmdBuffer.current = prev;
-        }
-        return;
-      }
-
-      // Down Arrow -> History forward
-      if (data === '\x1b[B') {
-        if (cmdHistory.index < cmdHistory.list.length - 1) {
-          cmdHistory.index++;
-          const next = cmdHistory.list[cmdHistory.index];
-          while (cmdBuffer.current.length > 0) {
-            term.write('\b \b');
-            cmdBuffer.current = cmdBuffer.current.slice(0, -1);
-          }
-          term.write(next);
-          cmdBuffer.current = next;
-        } else if (cmdHistory.index === cmdHistory.list.length - 1) {
-          cmdHistory.index = cmdHistory.list.length;
-          while (cmdBuffer.current.length > 0) {
-            term.write('\b \b');
-            cmdBuffer.current = cmdBuffer.current.slice(0, -1);
-          }
-        }
-        return;
-      }
-
-      // Printable keys & paste
-      if (data.length === 1 && data.charCodeAt(0) >= 32) {
-        cmdBuffer.current += data;
-        term.write(data);
-      } else if (data.length > 1 && !data.startsWith('\x1b')) {
-        cmdBuffer.current += data;
-        term.write(data);
+      if (window.electronAPI) {
+        window.electronAPI.sendTerminalInput(data);
       }
     });
 
-    // Listen to native stdout/stderr from shell & compilers
+    // Listen to native stdout/stderr from real PTY shell
     let unsubTerminalData: (() => void) | undefined;
     if (window.electronAPI) {
       unsubTerminalData = window.electronAPI.onTerminalData((data) => {
@@ -197,6 +110,9 @@ export const InteractiveTerminal: React.FC = () => {
     const resizeObserver = new ResizeObserver(() => {
       try {
         fitAddon.fit();
+        if (window.electronAPI && term.cols && term.rows) {
+          window.electronAPI.resizeTerminal(term.cols, term.rows);
+        }
       } catch {}
     });
     if (terminalContainerRef.current) {
@@ -204,7 +120,6 @@ export const InteractiveTerminal: React.FC = () => {
     }
 
     return () => {
-      clearTimeout(timer);
       disposableOnData.dispose();
       if (unsubTerminalData) unsubTerminalData();
       resizeObserver.disconnect();
@@ -217,8 +132,12 @@ export const InteractiveTerminal: React.FC = () => {
   };
 
   const handleRestartShell = () => {
-    if (window.electronAPI) {
-      window.electronAPI.restartTerminalSession(workspacePath || undefined);
+    if (window.electronAPI && termRef.current) {
+      window.electronAPI.restartTerminalSession(
+        workspacePath || undefined,
+        termRef.current.cols || 80,
+        termRef.current.rows || 24
+      );
     }
   };
 
@@ -226,23 +145,17 @@ export const InteractiveTerminal: React.FC = () => {
     if (e) e.preventDefault();
     if (!inputValue.trim()) return;
 
-    if (termRef.current) {
-      termRef.current.write(`\r\n\x1b[32m$ ${inputValue}\x1b[0m\r\n`);
-    }
-
     if (window.electronAPI) {
-      window.electronAPI.sendTerminalInput(`${inputValue}\r\n`);
+      window.electronAPI.sendTerminalInput(`${inputValue}\r`);
     }
 
     setInputValue('');
+    termRef.current?.focus();
   };
 
   const runQuickCommand = (cmd: string) => {
-    if (termRef.current) {
-      termRef.current.write(`\r\n\x1b[36m$ ${cmd}\x1b[0m\r\n`);
-    }
     if (window.electronAPI) {
-      window.electronAPI.sendTerminalInput(`${cmd}\r\n`);
+      window.electronAPI.sendTerminalInput(`${cmd}\r`);
       termRef.current?.focus();
     }
   };
@@ -266,7 +179,7 @@ export const InteractiveTerminal: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="font-semibold text-[11px] text-[#cccccc] flex items-center gap-1.5">
             <TerminalIcon className="w-3.5 h-3.5 text-[#34d058]" />
-            <span>Interactive Terminal</span>
+            <span>Integrated Terminal (PowerShell)</span>
           </span>
 
           {/* Quick Command Pills */}
@@ -338,7 +251,7 @@ export const InteractiveTerminal: React.FC = () => {
         onClick={focusTerminal}
       />
 
-      {/* Input Bar for commands and stdin */}
+      {/* Input Bar for quick commands and stdin */}
       <form
         onSubmit={handleSendInput}
         className={`flex items-center gap-2 px-2.5 py-1 border-t shrink-0 select-none ${
@@ -354,7 +267,7 @@ export const InteractiveTerminal: React.FC = () => {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Type commands (npm, javac, java, python, git, dir...) and press Enter..."
+          placeholder="Type command (npm run dev, javac, python, dir...) or type directly in terminal above..."
           className={`flex-1 rounded px-2.5 py-0.5 text-xs outline-none font-mono transition-colors ${
             isTurboTheme
               ? 'bg-[#000055] border border-[#55FFFF] text-[#FFFF55] placeholder-[#888888] focus:border-[#FFFF55]'

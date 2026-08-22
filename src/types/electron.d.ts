@@ -24,10 +24,11 @@ export interface ElectronAPI {
   writeTerminal: (data: string) => Promise<boolean>;
   killProcess: () => Promise<boolean>;
 
-  // Interactive General Shell Terminal Session
-  startTerminalSession: (cwd?: string) => Promise<boolean>;
+  // Real PTY Shell Terminal Session (node-pty / ConPTY)
+  startTerminalSession: (cwd?: string, cols?: number, rows?: number) => Promise<boolean>;
   sendTerminalInput: (data: string) => Promise<boolean>;
-  restartTerminalSession: (cwd?: string) => Promise<boolean>;
+  resizeTerminal: (cols: number, rows: number) => Promise<boolean>;
+  restartTerminalSession: (cwd?: string, cols?: number, rows?: number) => Promise<boolean>;
   killTerminalProcess: () => Promise<boolean>;
 
   generateAssembly: (options: {

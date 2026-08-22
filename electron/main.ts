@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
+import * as pty from 'node-pty';
 import { fileURLToPath } from 'url';
 import { compilerManager, CompileOptions } from './compiler';
 import { liveServerManager, LiveServerFile } from './liveServer';
@@ -138,79 +139,84 @@ app.whenReady().then(async () => {
   });
 
   // ========================================================
-  // PERSISTENT INTERACTIVE TERMINAL SHELL (PowerShell / cmd)
+  // REAL PSEUDO-TERMINAL (PTY) SHELL ENGINE (node-pty / ConPTY)
   // ========================================================
-  let activeShellProcess: any = null;
+  let activePtyProcess: any = null;
 
-  function startShellSession(cwd?: string) {
-    if (activeShellProcess) {
+  function startPtySession(cwd?: string, cols = 80, rows = 24) {
+    if (activePtyProcess) {
       try {
-        activeShellProcess.kill();
+        activePtyProcess.kill();
       } catch {}
-      activeShellProcess = null;
+      activePtyProcess = null;
     }
 
     const workDir = cwd && fs.existsSync(cwd) ? cwd : process.cwd();
     const isWindows = process.platform === 'win32';
-    const shellExe = isWindows ? (process.env.COMSPEC || 'cmd.exe') : (process.env.SHELL || '/bin/bash');
-    
-    // Spawn interactive shell with inherit environment and UTF-8 support
-    const shellEnv = {
-      ...process.env,
-      TERM: 'xterm-256color',
-      COLORTERM: 'truecolor',
-      PYTHONUNBUFFERED: '1',
-    };
+    const shellExe = isWindows ? 'powershell.exe' : (process.env.SHELL || '/bin/bash');
+    const shellArgs = isWindows ? ['-NoLogo'] : [];
 
     try {
-      activeShellProcess = spawn(shellExe, [], {
+      activePtyProcess = pty.spawn(shellExe, shellArgs, {
+        name: 'xterm-256color',
+        cols: cols || 80,
+        rows: rows || 24,
         cwd: workDir,
-        env: shellEnv,
-        shell: false,
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor',
+        } as any,
       });
 
-      activeShellProcess.stdout?.on('data', (data: Buffer) => {
-        win?.webContents.send('terminal:data', data.toString());
+      activePtyProcess.onData((data: string) => {
+        win?.webContents.send('terminal:data', data);
       });
 
-      activeShellProcess.stderr?.on('data', (data: Buffer) => {
-        win?.webContents.send('terminal:data', data.toString());
-      });
-
-      activeShellProcess.on('close', (code: number | null) => {
-        win?.webContents.send('terminal:data', `\r\n[Terminal session ended with exit code ${code}]\r\n`);
-        activeShellProcess = null;
+      activePtyProcess.onExit(({ exitCode }: { exitCode: number }) => {
+        win?.webContents.send('terminal:data', `\r\n\x1b[33m[Terminal session closed (Code: ${exitCode})]\x1b[0m\r\n`);
+        activePtyProcess = null;
       });
 
       return true;
     } catch (err) {
-      console.error('Failed to spawn interactive shell:', err);
+      console.error('Failed to spawn PTY session:', err);
       return false;
     }
   }
 
-  ipcMain.handle('terminal:start-session', async (_, cwd?: string) => {
-    return startShellSession(cwd);
+  ipcMain.handle('terminal:start-session', async (_, cwd?: string, cols?: number, rows?: number) => {
+    return startPtySession(cwd, cols, rows);
   });
 
   ipcMain.handle('terminal:send-data', async (_, data: string) => {
-    if (activeShellProcess && activeShellProcess.stdin && activeShellProcess.stdin.writable) {
-      activeShellProcess.stdin.write(data);
+    if (activePtyProcess) {
+      activePtyProcess.write(data);
       return true;
     }
     return compilerManager.sendInputToProcess(data);
   });
 
-  ipcMain.handle('terminal:restart-session', async (_, cwd?: string) => {
-    return startShellSession(cwd);
+  ipcMain.handle('terminal:resize', async (_, cols: number, rows: number) => {
+    if (activePtyProcess && cols > 0 && rows > 0) {
+      try {
+        activePtyProcess.resize(cols, rows);
+        return true;
+      } catch {}
+    }
+    return false;
+  });
+
+  ipcMain.handle('terminal:restart-session', async (_, cwd?: string, cols?: number, rows?: number) => {
+    return startPtySession(cwd, cols, rows);
   });
 
   ipcMain.handle('terminal:kill-session', async () => {
-    if (activeShellProcess) {
+    if (activePtyProcess) {
       try {
-        activeShellProcess.kill();
+        activePtyProcess.kill();
       } catch {}
-      activeShellProcess = null;
+      activePtyProcess = null;
     }
     return compilerManager.killRunningProcess();
   });
