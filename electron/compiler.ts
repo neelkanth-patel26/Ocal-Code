@@ -2,6 +2,10 @@ import { spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface DiagnosticItem {
   id: string;
@@ -812,10 +816,16 @@ using namespace std;
     }
   }
 
+  private cachedToolchains: ToolchainInfo[] | null = null;
+
   /**
    * Detect installed compilers & runtimes on the system (Bundled GCC, Python, Java, Node.js)
    */
-  public async detectToolchains(): Promise<ToolchainInfo[]> {
+  public async detectToolchains(forceRefresh = false): Promise<ToolchainInfo[]> {
+    if (this.cachedToolchains && !forceRefresh) {
+      return this.cachedToolchains;
+    }
+
     const candidates = [
       { name: 'g++ (C++)', command: 'g++' },
       { name: 'gcc (C)', command: 'gcc' },
@@ -824,30 +834,31 @@ using namespace std;
       { name: 'node (JavaScript/TS)', command: 'node' },
     ];
 
-    const results: ToolchainInfo[] = [];
+    const results = await Promise.all(
+      candidates.map(async (c) => {
+        const resolved = this.resolveCompilerExecutable(c.command);
+        try {
+          const info = await this.checkToolchain(resolved.commandPath, resolved.binDir);
+          return {
+            name: resolved.isBundled ? `${c.name} (Bundled)` : c.name,
+            path: resolved.commandPath,
+            version: info.version || 'Available',
+            detected: info.available,
+            isDefault: c.command === 'g++',
+          };
+        } catch {
+          return {
+            name: c.name,
+            path: resolved.commandPath,
+            version: 'Not detected',
+            detected: false,
+            isDefault: false,
+          };
+        }
+      })
+    );
 
-    for (const c of candidates) {
-      const resolved = this.resolveCompilerExecutable(c.command);
-      try {
-        const info = await this.checkToolchain(resolved.commandPath, resolved.binDir);
-        results.push({
-          name: resolved.isBundled ? `${c.name} (Bundled)` : c.name,
-          path: resolved.commandPath,
-          version: info.version || 'Available',
-          detected: info.available,
-          isDefault: c.command === 'g++',
-        });
-      } catch {
-        results.push({
-          name: c.name,
-          path: resolved.commandPath,
-          version: 'Not detected',
-          detected: false,
-          isDefault: false,
-        });
-      }
-    }
-
+    this.cachedToolchains = results;
     return results;
   }
 
