@@ -167,18 +167,26 @@ export const ProjectLauncher: React.FC = () => {
     addNewFile(fileName, lang, '');
   };
 
+  const isOcalTheme = theme === 'ocal-signature';
+
   return (
     <div
-      className={`h-full w-full overflow-y-auto p-6 md:p-10 flex flex-col items-center justify-center select-none ${
+      className={`h-full w-full overflow-y-auto p-6 md:p-10 flex flex-col items-center justify-center select-none transition-colors ${
         isTurboTheme
           ? 'bg-[#0000AA] text-white font-dos'
+          : isOcalTheme
+          ? 'bg-[#0c0c0c] text-[#e8e8e8] font-sans'
           : 'bg-[#181818] text-[#cccccc] font-sans'
       }`}
     >
       <div className="max-w-4xl w-full space-y-6">
         {/* Welcome Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0078d4]/10 border border-[#0078d4]/30 text-xs text-[#60cdff] font-medium mb-1">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-1 ${
+            isOcalTheme
+              ? 'bg-[#34d058]/15 border border-[#34d058]/40 text-[#34d058]'
+              : 'bg-[#0078d4]/10 border border-[#0078d4]/30 text-[#60cdff]'
+          }`}>
             <Sparkles className="w-3.5 h-3.5" />
             <span>Select a project type to start coding</span>
           </div>
@@ -200,12 +208,16 @@ export const ProjectLauncher: React.FC = () => {
               className={`group p-4 rounded-lg border cursor-pointer transition-all duration-150 flex flex-col justify-between ${
                 isTurboTheme
                   ? 'bg-[#000077] border-[#55FFFF] hover:bg-[#0000AA] hover:border-[#FFFF55]'
+                  : isOcalTheme
+                  ? 'bg-[#121318] border-[#252536] hover:bg-[#181920] hover:border-[#34d058] hover:shadow-lg'
                   : 'bg-[#202020] border-[#2e2e2e] hover:bg-[#252525] hover:border-[#0078d4] hover:shadow-lg'
               }`}
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <div className={`p-2 rounded-md ${isTurboTheme ? 'bg-[#000055]' : 'bg-[#181818]'}`}>
+                  <div className={`p-2 rounded-md ${
+                    isTurboTheme ? 'bg-[#000055]' : isOcalTheme ? 'bg-[#181920]' : 'bg-[#181818]'
+                  }`}>
                     {opt.icon}
                   </div>
                   <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${opt.badgeColor}`}>
@@ -213,7 +225,9 @@ export const ProjectLauncher: React.FC = () => {
                   </span>
                 </div>
 
-                <h3 className="font-semibold text-sm text-white group-hover:text-[#60cdff] transition-colors">
+                <h3 className={`font-semibold text-sm text-white transition-colors ${
+                  isOcalTheme ? 'group-hover:text-[#34d058]' : 'group-hover:text-[#60cdff]'
+                }`}>
                   {opt.title}
                 </h3>
                 <p className="text-[11px] text-[#858585] mt-1 line-clamp-2 leading-relaxed">
@@ -221,9 +235,13 @@ export const ProjectLauncher: React.FC = () => {
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-[#2c2c2c] flex items-center justify-between text-xs text-[#858585] group-hover:text-white transition-colors">
+              <div className={`mt-4 pt-3 border-t flex items-center justify-between text-xs text-[#858585] group-hover:text-white transition-colors ${
+                isOcalTheme ? 'border-[#252536]' : 'border-[#2c2c2c]'
+              }`}>
                 <span className="font-mono text-[11px]">{opt.fileName}</span>
-                <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform text-[#0078d4]" />
+                <ChevronRight className={`w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform ${
+                  isOcalTheme ? 'text-[#34d058]' : 'text-[#0078d4]'
+                }`} />
               </div>
             </div>
           ))}
@@ -236,6 +254,8 @@ export const ProjectLauncher: React.FC = () => {
             className={`p-3.5 rounded-lg border cursor-pointer transition-colors flex items-center gap-3 ${
               isTurboTheme
                 ? 'bg-[#000077] border-[#55FFFF] hover:bg-[#000088]'
+                : isOcalTheme
+                ? 'bg-[#121318] border-[#34d058]/40 hover:border-[#34d058] hover:bg-[#181920]'
                 : 'bg-[#1e1e1e] border-[#34d058]/40 hover:border-[#34d058] hover:bg-[#252525]'
             }`}
           >

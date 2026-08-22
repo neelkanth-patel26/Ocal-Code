@@ -1,5 +1,6 @@
 import * as http from 'http';
 import * as path from 'path';
+import * as fs from 'fs';
 
 export interface LiveServerFile {
   name: string;
@@ -11,6 +12,7 @@ export class LiveServerManager {
   private server: http.Server | null = null;
   private currentPort = 5500;
   private files: Map<string, string> = new Map();
+  private workspaceDir: string | null = null;
   private sseClients: Set<http.ServerResponse> = new Set();
   private isRunning = false;
 
@@ -38,12 +40,26 @@ export class LiveServerManager {
         return 'image/gif';
       case '.ico':
         return 'image/x-icon';
+      case '.woff':
+        return 'font/woff';
+      case '.woff2':
+        return 'font/woff2';
+      case '.ttf':
+        return 'font/ttf';
       default:
         return 'text/plain; charset=utf-8';
     }
   }
 
-  public updateFiles(fileList: LiveServerFile[]) {
+  public setWorkspaceDir(dir: string | null) {
+    this.workspaceDir = dir && fs.existsSync(dir) ? dir : null;
+    this.notifyClients();
+  }
+
+  public updateFiles(fileList: LiveServerFile[], workspaceDir?: string | null) {
+    if (workspaceDir !== undefined) {
+      this.workspaceDir = workspaceDir && fs.existsSync(workspaceDir) ? workspaceDir : null;
+    }
     this.files.clear();
     for (const f of fileList) {
       const cleanName = f.name.replace(/^\/+/, '');
@@ -71,7 +87,7 @@ export class LiveServerManager {
       }
 
       this.currentPort = requestedPort;
-      const server = http.createServer((req, res) => {
+      const server = http.createServer(async (req, res) => {
         // Enable CORS
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
@@ -100,63 +116,92 @@ export class LiveServerManager {
           return;
         }
 
-        // Determine requested file
-        let targetName = urlPath === '/' ? 'index.html' : urlPath.replace(/^\/+/, '');
-        let content = this.files.get(targetName) || this.files.get(targetName.toLowerCase());
+        // Determine requested file target
+        let targetRelative = urlPath === '/' ? 'index.html' : urlPath.replace(/^\/+/, '');
+        
+        let foundBuffer: Buffer | string | null = null;
+        let resolvedFileName = targetRelative;
 
-        // If not found and target doesn't have extension, check for .html
-        if (!content && !path.extname(targetName)) {
-          targetName = `${targetName}.html`;
-          content = this.files.get(targetName) || this.files.get(targetName.toLowerCase());
-        }
-
-        // If still not found, fallback to index.html or first HTML file in workspace
-        if (!content) {
-          for (const [key, val] of this.files.entries()) {
-            if (key.endsWith('.html')) {
-              content = val;
-              targetName = key;
-              break;
+        // 1. Check workspace folder on disk if workspaceDir is set
+        if (this.workspaceDir) {
+          const directDiskPath = path.join(this.workspaceDir, targetRelative);
+          if (fs.existsSync(directDiskPath) && fs.statSync(directDiskPath).isFile()) {
+            try {
+              foundBuffer = await fs.promises.readFile(directDiskPath);
+              resolvedFileName = directDiskPath;
+            } catch {}
+          } else if (urlPath === '/' || !path.extname(targetRelative)) {
+            // Check for index.html or fallback html in workspace root
+            const indexDiskPath = path.join(this.workspaceDir, 'index.html');
+            if (fs.existsSync(indexDiskPath) && fs.statSync(indexDiskPath).isFile()) {
+              try {
+                foundBuffer = await fs.promises.readFile(indexDiskPath);
+                resolvedFileName = indexDiskPath;
+              } catch {}
             }
           }
         }
 
-        if (content !== undefined) {
-          const mime = this.getMimeType(targetName);
+        // 2. Check in-memory open editor files
+        if (foundBuffer === null) {
+          let memContent = this.files.get(targetRelative) || this.files.get(targetRelative.toLowerCase());
+
+          if (!memContent && !path.extname(targetRelative)) {
+            const htmlName = `${targetRelative}.html`;
+            memContent = this.files.get(htmlName) || this.files.get(htmlName.toLowerCase());
+            if (memContent) resolvedFileName = htmlName;
+          }
+
+          // If requesting root '/' and index.html not found, serve ANY active HTML file user is editing!
+          if (!memContent && (urlPath === '/' || targetRelative === 'index.html')) {
+            for (const [key, val] of this.files.entries()) {
+              if (key.endsWith('.html') || key.endsWith('.htm')) {
+                memContent = val;
+                resolvedFileName = key;
+                break;
+              }
+            }
+          }
+
+          if (memContent !== undefined) {
+            foundBuffer = memContent;
+          }
+        }
+
+        // 3. Serve found content with live reload script injection
+        if (foundBuffer !== null) {
+          const mime = this.getMimeType(resolvedFileName);
           res.writeHead(200, {
             'Content-Type': mime,
             'Cache-Control': 'no-cache',
           });
 
-          // Inject Live Reload snippet into HTML
           if (mime.startsWith('text/html')) {
+            let htmlStr = typeof foundBuffer === 'string' ? foundBuffer : foundBuffer.toString('utf8');
             const reloadScript = `
-              <!-- Ocal++ Live Server Auto-Reload -->
+              <!-- Ocal Code Live Server Auto-Reload -->
               <script>
                 (function() {
                   const es = new EventSource('/__live_reload');
                   es.onmessage = function(e) {
                     if (e.data === 'reload') {
-                      console.log('[Ocal++ Live Server] Reloading page...');
                       location.reload();
                     }
-                  };
-                  es.onerror = function() {
-                    console.warn('[Ocal++ Live Server] Disconnected. Reconnecting...');
                   };
                 })();
               </script>
             `;
-            if (content.includes('</body>')) {
-              content = content.replace('</body>', `${reloadScript}</body>`);
+            if (htmlStr.includes('</body>')) {
+              htmlStr = htmlStr.replace('</body>', `${reloadScript}</body>`);
             } else {
-              content = `${content}${reloadScript}`;
+              htmlStr = `${htmlStr}${reloadScript}`;
             }
+            res.end(htmlStr);
+          } else {
+            res.end(foundBuffer);
           }
-
-          res.end(content);
         } else {
-          // Default Welcome Landing Page when no files are loaded
+          // Default Welcome Landing Page only when zero user files/HTML exist
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
           res.end(`
             <!DOCTYPE html>
@@ -166,17 +211,18 @@ export class LiveServerManager {
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <title>Ocal Code Live Server</title>
               <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-                .card { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; text-align: center; max-width: 450px; }
-                h1 { color: #38bdf8; font-size: 22px; margin-bottom: 8px; }
-                p { color: #94a3b8; font-size: 14px; }
-                .badge { display: inline-block; background: #0284c7; color: white; padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: bold; margin-top: 15px; }
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0c0c0c; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+                .card { background: #121318; border: 1px solid #252536; border-radius: 12px; padding: 32px; text-align: center; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+                h1 { color: #34d058; font-size: 22px; margin-bottom: 8px; font-weight: 700; }
+                p { color: #858585; font-size: 14px; line-height: 1.5; }
+                code { background: #181920; color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+                .badge { display: inline-block; background: #34d058; color: #000; padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: bold; margin-top: 16px; }
               </style>
             </head>
             <body>
               <div class="card">
-                <h1>⚡ Ocal Code Live Server Online</h1>
-                <p>Server running on <strong>http://localhost:${this.currentPort}</strong>. Add or edit an <code>index.html</code> file in Ocal Code to render your website live.</p>
+                <h1>⚡ Ocal Code Live Server Ready</h1>
+                <p>Create or open any <code>.html</code> file (e.g. <code>index.html</code>) or open a project folder in Ocal Code to render your website live with instantaneous hot reload.</p>
                 <div class="badge">Hot Reload Active</div>
               </div>
               <script>
@@ -191,7 +237,6 @@ export class LiveServerManager {
 
       server.on('error', (err: any) => {
         if (err.code === 'EADDRINUSE') {
-          // Try next port if 5500 is occupied
           console.log(`Port ${this.currentPort} in use, trying port ${this.currentPort + 1}`);
           this.currentPort += 1;
           server.listen(this.currentPort);
@@ -204,7 +249,7 @@ export class LiveServerManager {
       server.listen(this.currentPort, () => {
         this.server = server;
         this.isRunning = true;
-        console.log(`✔ [Ocal++ Live Server] Online and listening on http://localhost:${this.currentPort}`);
+        console.log(`✔ [Ocal Code Live Server] Online and listening on http://localhost:${this.currentPort}`);
         resolve({ port: this.currentPort, url: `http://localhost:${this.currentPort}` });
       });
     });

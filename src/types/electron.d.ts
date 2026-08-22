@@ -52,7 +52,7 @@ export interface ElectronAPI {
 
   startLiveServer: (port?: number) => Promise<{ port: number; url: string }>;
   stopLiveServer: () => Promise<void>;
-  updateLiveServerFiles: (files: Array<{ name: string; content: string; language?: string }>) => Promise<boolean>;
+  updateLiveServerFiles: (files: Array<{ name: string; content: string; language?: string }>, workspaceDir?: string) => Promise<boolean>;
   getLiveServerStatus: () => Promise<{ running: boolean; port: number; url: string }>;
   openExternalUrl: (url: string) => Promise<boolean>;
 

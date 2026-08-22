@@ -32,12 +32,16 @@ export const SettingsModal: React.FC = () => {
     setCompilerConfig({ warnings: next });
   };
 
+  const isOcalTheme = theme === 'ocal-signature';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
       <div
-        className={`w-full max-w-xl rounded shadow-popup overflow-hidden border ${
+        className={`w-full max-w-xl rounded-lg shadow-2xl overflow-hidden border ${
           isTurboTheme
             ? 'bg-[#0000AA] border-turbo-yellow text-white font-dos'
+            : isOcalTheme
+            ? 'bg-[#121318] border-[#252536] text-[#e8e8e8] font-sans'
             : 'bg-[#202020] border-[#383838] text-[#cccccc] font-sans'
         }`}
       >
@@ -46,11 +50,13 @@ export const SettingsModal: React.FC = () => {
           className={`flex items-center justify-between px-4 py-2.5 border-b ${
             isTurboTheme
               ? 'bg-[#000077] border-turbo-yellow text-turbo-yellow'
+              : isOcalTheme
+              ? 'bg-[#181920] border-[#252536] text-[#ffffff]'
               : 'bg-[#1f1f1f] border-[#2b2b2b] text-[#ffffff]'
           }`}
         >
           <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-[#0078d4]" />
+            <Cpu className={`w-4 h-4 ${isOcalTheme ? 'text-[#34d058]' : 'text-[#0078d4]'}`} />
             <h2 className="font-semibold text-xs tracking-tight">
               Compiler Configuration
             </h2>

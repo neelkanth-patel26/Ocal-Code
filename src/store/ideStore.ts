@@ -172,6 +172,21 @@ const getDefaultLanguageInfo = (lang: LanguageTarget): { ext: string; content: s
   }
 };
 
+const THEME_STORAGE_KEY = 'ocal_code_theme_preference';
+
+const getInitialTheme = (): ThemeName => {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (
+      saved &&
+      ['ocal-signature', 'turbo-nostalgia', 'modern-dark', 'modern-light', 'cyberpunk-neon'].includes(saved)
+    ) {
+      return saved as ThemeName;
+    }
+  } catch {}
+  return 'ocal-signature';
+};
+
 export const useIDEStore = create<IDEState>((set, get) => ({
   files: [],
   activeFileId: '',
@@ -511,8 +526,13 @@ export const useIDEStore = create<IDEState>((set, get) => ({
   // UI
   activeBottomTab: 'terminal',
   setActiveBottomTab: (activeBottomTab) => set({ activeBottomTab }),
-  theme: 'ocal-signature', // Default to Ocal Web Project Signature Theme
-  setTheme: (theme) => set({ theme }),
+  theme: getInitialTheme(),
+  setTheme: (theme) => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {}
+    set({ theme });
+  },
   sidebarOpen: true,
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),

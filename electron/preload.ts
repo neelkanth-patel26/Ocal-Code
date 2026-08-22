@@ -37,7 +37,8 @@ export const electronAPI = {
   // Live Web Server API
   startLiveServer: (port?: number) => ipcRenderer.invoke('live-server:start', port),
   stopLiveServer: () => ipcRenderer.invoke('live-server:stop'),
-  updateLiveServerFiles: (files: any[]) => ipcRenderer.invoke('live-server:update-files', files),
+  updateLiveServerFiles: (files: any[], workspaceDir?: string) =>
+    ipcRenderer.invoke('live-server:update-files', files, workspaceDir),
   getLiveServerStatus: () => ipcRenderer.invoke('live-server:status'),
   openExternalUrl: (url: string) => ipcRenderer.invoke('shell:open-external', url),
 

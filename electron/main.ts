@@ -494,4 +494,32 @@ app.whenReady().then(async () => {
       return false;
     }
   });
+
+  // ========================================================
+  // LIVE WEB SERVER HANDLERS
+  // ========================================================
+  ipcMain.handle('live-server:start', async (_, port?: number) => {
+    return await liveServerManager.start(port || 5500);
+  });
+
+  ipcMain.handle('live-server:stop', async () => {
+    return await liveServerManager.stop();
+  });
+
+  ipcMain.handle('live-server:update-files', async (_, files: any[], workspaceDir?: string) => {
+    liveServerManager.updateFiles(files, workspaceDir);
+    return true;
+  });
+
+  ipcMain.handle('live-server:status', async () => {
+    return liveServerManager.getStatus();
+  });
+
+  ipcMain.handle('shell:open-external', async (_, url: string) => {
+    await shell.openExternal(url);
+    return true;
+  });
+
+  // Auto-start live server on ready
+  liveServerManager.start(5500).catch((err) => console.log('Live server auto-start:', err));
 });

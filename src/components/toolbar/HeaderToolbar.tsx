@@ -286,11 +286,13 @@ export const HeaderToolbar: React.FC = () => {
           className={`hidden md:flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border ${
             isTurboTheme
               ? 'bg-[#0000AA] border-[#55FFFF] text-[#FFFF55]'
+              : isOcalTheme
+              ? 'bg-[#181920] border-[#252536] text-[#34d058]'
               : 'bg-[#202020] border-[#2b2b2b] text-[#858585]'
           }`}
           title="Strict manual syntax mode enabled"
         >
-          <Shield className={`w-3 h-3 ${isTurboTheme ? 'text-[#FFFF55]' : 'text-[#23d18b]'}`} />
+          <Shield className={`w-3 h-3 ${isTurboTheme ? 'text-[#FFFF55]' : isOcalTheme ? 'text-[#34d058]' : 'text-[#23d18b]'}`} />
           <span>Strict Learning</span>
         </div>
 
@@ -299,17 +301,19 @@ export const HeaderToolbar: React.FC = () => {
           <select
             value={theme}
             onChange={(e) => setTheme(e.target.value as ThemeName)}
-            className={`px-2 py-0.5 text-xs rounded outline-none cursor-pointer border ${
+            className={`px-2 py-0.5 text-xs rounded outline-none cursor-pointer border transition-colors ${
               isTurboTheme
                 ? 'bg-[#0000AA] border-[#55FFFF] text-[#FFFF55] font-bold'
+                : isOcalTheme
+                ? 'bg-[#181920] border-[#252536] text-[#e8e8e8] hover:border-[#34d058]'
                 : 'bg-[#252525] border-[#333333] text-[#cccccc] hover:border-[#444444]'
             }`}
           >
-            <option value="ocal-signature">Ocal Signature</option>
-            <option value="modern-dark">Dark+ (WinUI)</option>
-            <option value="turbo-nostalgia">Turbo C++ DOS</option>
-            <option value="cyberpunk-neon">Cyberpunk</option>
-            <option value="modern-light">Light</option>
+            <option value="ocal-signature" className="bg-[#121318] text-white">Ocal Signature</option>
+            <option value="modern-dark" className="bg-[#202020] text-white">Dark+ (WinUI)</option>
+            <option value="turbo-nostalgia" className="bg-[#0000AA] text-yellow-300">Turbo C++ DOS</option>
+            <option value="cyberpunk-neon" className="bg-[#0d0221] text-pink-300">Cyberpunk</option>
+            <option value="modern-light" className="bg-white text-black">Light</option>
           </select>
         </div>
 

@@ -49,14 +49,34 @@ export const App: React.FC = () => {
         {sidebarOpen && <LeftSidebar />}
 
         {/* Center Studio Area (Tabs, Editor, Bottom Dock / Welcome Hub) */}
-        <main className={`flex flex-col flex-1 min-w-0 overflow-hidden ${isOcalTheme ? 'bg-[#0c0c0c]' : 'bg-[#1e1e1e]'}`}>
+        <main className={`flex flex-col flex-1 min-w-0 overflow-hidden ${
+          isTurboTheme
+            ? 'bg-[#000088]'
+            : isOcalTheme
+            ? 'bg-[#0c0c0c]'
+            : isCyberpunk
+            ? 'bg-[#0d0221]'
+            : isLight
+            ? 'bg-[#ffffff]'
+            : 'bg-[#1e1e1e]'
+        }`}>
           {isLauncherActive ? (
             <ProjectLauncher />
           ) : (
             <>
               <EditorTabs />
 
-              <div className={`flex-1 min-h-0 relative ${isOcalTheme ? 'bg-[#0c0c0c]' : 'bg-[#1e1e1e]'}`}>
+              <div className={`flex-1 min-h-0 relative ${
+                isTurboTheme
+                  ? 'bg-[#000088]'
+                  : isOcalTheme
+                  ? 'bg-[#0c0c0c]'
+                  : isCyberpunk
+                  ? 'bg-[#0d0221]'
+                  : isLight
+                  ? 'bg-[#ffffff]'
+                  : 'bg-[#1e1e1e]'
+              }`}>
                 <CodeEditor />
               </div>
 

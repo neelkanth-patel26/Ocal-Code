@@ -172,7 +172,9 @@ export const BottomPanel: React.FC = () => {
 
       {/* Tab Contents */}
       {!isCollapsed && (
-        <div className={`flex-1 overflow-hidden relative ${isTurboTheme ? 'bg-[#000000]' : 'bg-[#181818]'}`}>
+        <div className={`flex-1 overflow-hidden relative ${
+          isTurboTheme ? 'bg-[#000000]' : isOcalTheme ? 'bg-[#0c0c0c]' : 'bg-[#181818]'
+        }`}>
           {activeBottomTab === 'terminal' && <InteractiveTerminal />}
           {activeBottomTab === 'live-server' && <LiveServerPreview />}
           {activeBottomTab === 'build-output' && <BuildOutputLog />}
