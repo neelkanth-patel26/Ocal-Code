@@ -1,0 +1,145 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* ==========================================================================
+   WINUI / FLUENT DESKTOP DESIGN SYSTEM
+   ========================================================================== */
+
+:root {
+  --win-bg: #181818;
+  --win-surface: #1f1f1f;
+  --win-card: #252525;
+  --win-hover: #2a2a2a;
+  --win-active: #333333;
+  --win-border: #2b2b2b;
+  --win-border-light: #383838;
+  --win-accent: #0078d4;
+  --win-accent-hover: #1084d8;
+  --win-accent-light: #60cdff;
+  --win-text: #cccccc;
+  --win-text-bright: #ffffff;
+  --win-muted: #858585;
+  --win-danger: #f14c4c;
+  --win-success: #23d18b;
+  --win-warning: #cca700;
+}
+
+/* Windows Fluent Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3e3e42;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+@layer base {
+  body {
+    background-color: #181818;
+    color: #cccccc;
+    font-family: "Segoe UI Variable", "Segoe UI", Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  /* WinUI Standard Button */
+  .win-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    background-color: #252525;
+    border: 1px solid #333333;
+    color: #cccccc;
+    transition: all 0.1s ease;
+    cursor: pointer;
+  }
+
+  .win-btn:hover {
+    background-color: #2f2f2f;
+    border-color: #404040;
+    color: #ffffff;
+  }
+
+  .win-btn:active {
+    background-color: #202020;
+    transform: scale(0.99);
+  }
+
+  .win-btn-accent {
+    background-color: #0078d4;
+    border: 1px solid #1084d8;
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .win-btn-accent:hover {
+    background-color: #1084d8;
+    border-color: #2b95e0;
+  }
+
+  .win-btn-accent:active {
+    background-color: #006cc1;
+  }
+
+  /* WinUI Card */
+  .win-card {
+    background-color: #202020;
+    border: 1px solid #2b2b2b;
+    border-radius: 4px;
+  }
+
+  /* Ocal Signature Design System */
+  .ocal-surface-0 {
+    background-color: #0c0c0c;
+  }
+  .ocal-surface-1 {
+    background-color: #121318;
+  }
+  .ocal-surface-2 {
+    background-color: #181920;
+  }
+  .ocal-border {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .ocal-pill {
+    border-radius: 9999px;
+  }
+  .ocal-accent-glow {
+    box-shadow: 0 0 15px rgba(52, 208, 88, 0.25);
+  }
+}
+
+/* Electron Window Drag Utilities */
+.app-drag {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Turbo Nostalgia DOS styling */
+.font-dos {
+  font-family: 'Px437 IBM VGA 8x16', 'Fixedsys', 'Cascadia Code', 'Fira Code', monospace;
+  letter-spacing: 0.02em;
+}
