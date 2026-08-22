@@ -10,8 +10,8 @@ export const InteractiveTerminal: React.FC = () => {
   const terminalContainerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const { isRunning, isCompiling, theme, lastBinaryPath, workspacePath } = useIDEStore();
-  const { killProcess, runLastCompiledBinary } = useCompiler();
+  const { isRunning, isCompiling, theme, workspacePath } = useIDEStore();
+  const { killProcess } = useCompiler();
   const [inputValue, setInputValue] = useState('');
 
   const isTurboTheme = theme === 'turbo-nostalgia';
@@ -94,10 +94,95 @@ export const InteractiveTerminal: React.FC = () => {
       window.electronAPI.startTerminalSession(workspacePath || undefined);
     }
 
-    // Direct keystrokes handling
+    // Line buffer and command history for responsive terminal experience
+    const cmdBuffer = { current: '' };
+    const cmdHistory = { list: [] as string[], index: -1 };
+
+    // Keystrokes handling with instant local echo
     const disposableOnData = term.onData((data) => {
-      if (window.electronAPI) {
-        window.electronAPI.sendTerminalInput(data);
+      // Enter key -> Execute command
+      if (data === '\r' || data === '\n') {
+        const cmd = cmdBuffer.current;
+        term.write('\r\n');
+        if (window.electronAPI) {
+          window.electronAPI.sendTerminalInput(`${cmd}\r\n`);
+        }
+        if (cmd.trim()) {
+          cmdHistory.list.push(cmd);
+          cmdHistory.index = cmdHistory.list.length;
+        }
+        cmdBuffer.current = '';
+        return;
+      }
+
+      // Backspace
+      if (data === '\x7f' || data === '\b') {
+        if (cmdBuffer.current.length > 0) {
+          cmdBuffer.current = cmdBuffer.current.slice(0, -1);
+          term.write('\b \b');
+        }
+        return;
+      }
+
+      // Ctrl+C -> Cancel line / Kill active task
+      if (data === '\x03') {
+        term.write('^C\r\n');
+        cmdBuffer.current = '';
+        if (window.electronAPI) {
+          window.electronAPI.killTerminalProcess();
+        }
+        return;
+      }
+
+      // Ctrl+L -> Clear
+      if (data === '\x0c') {
+        term.clear();
+        return;
+      }
+
+      // Up Arrow -> History back
+      if (data === '\x1b[A') {
+        if (cmdHistory.list.length > 0 && cmdHistory.index > 0) {
+          cmdHistory.index--;
+          const prev = cmdHistory.list[cmdHistory.index];
+          while (cmdBuffer.current.length > 0) {
+            term.write('\b \b');
+            cmdBuffer.current = cmdBuffer.current.slice(0, -1);
+          }
+          term.write(prev);
+          cmdBuffer.current = prev;
+        }
+        return;
+      }
+
+      // Down Arrow -> History forward
+      if (data === '\x1b[B') {
+        if (cmdHistory.index < cmdHistory.list.length - 1) {
+          cmdHistory.index++;
+          const next = cmdHistory.list[cmdHistory.index];
+          while (cmdBuffer.current.length > 0) {
+            term.write('\b \b');
+            cmdBuffer.current = cmdBuffer.current.slice(0, -1);
+          }
+          term.write(next);
+          cmdBuffer.current = next;
+        } else if (cmdHistory.index === cmdHistory.list.length - 1) {
+          cmdHistory.index = cmdHistory.list.length;
+          while (cmdBuffer.current.length > 0) {
+            term.write('\b \b');
+            cmdBuffer.current = cmdBuffer.current.slice(0, -1);
+          }
+        }
+        return;
+      }
+
+      // Printable keys & paste
+      if (data.length === 1 && data.charCodeAt(0) >= 32) {
+        cmdBuffer.current += data;
+        term.write(data);
+      } else if (data.length > 1 && !data.startsWith('\x1b')) {
+        cmdBuffer.current += data;
+        term.write(data);
       }
     });
 
@@ -141,6 +226,10 @@ export const InteractiveTerminal: React.FC = () => {
     if (e) e.preventDefault();
     if (!inputValue.trim()) return;
 
+    if (termRef.current) {
+      termRef.current.write(`\r\n\x1b[32m$ ${inputValue}\x1b[0m\r\n`);
+    }
+
     if (window.electronAPI) {
       window.electronAPI.sendTerminalInput(`${inputValue}\r\n`);
     }
@@ -149,6 +238,9 @@ export const InteractiveTerminal: React.FC = () => {
   };
 
   const runQuickCommand = (cmd: string) => {
+    if (termRef.current) {
+      termRef.current.write(`\r\n\x1b[36m$ ${cmd}\x1b[0m\r\n`);
+    }
     if (window.electronAPI) {
       window.electronAPI.sendTerminalInput(`${cmd}\r\n`);
       termRef.current?.focus();
@@ -262,7 +354,7 @@ export const InteractiveTerminal: React.FC = () => {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Execute shell commands (npm, javac, java, python, git...) or type input..."
+          placeholder="Type commands (npm, javac, java, python, git, dir...) and press Enter..."
           className={`flex-1 rounded px-2.5 py-0.5 text-xs outline-none font-mono transition-colors ${
             isTurboTheme
               ? 'bg-[#000055] border border-[#55FFFF] text-[#FFFF55] placeholder-[#888888] focus:border-[#FFFF55]'

@@ -354,10 +354,15 @@ app.whenReady().then(async () => {
     '.next',
     'temp',
     '__pycache__',
-    '.vscode',
     '.idea',
     'bin',
     'obj',
+  ]);
+
+  const IGNORED_FILES = new Set([
+    '.DS_Store',
+    'Thumbs.db',
+    'desktop.ini',
   ]);
 
   async function scanDirectoryTree(dirPath: string, depth = 0, maxDepth = 6): Promise<any[]> {
@@ -367,8 +372,8 @@ app.whenReady().then(async () => {
       const nodes = [];
 
       for (const entry of entries) {
-        if (entry.name.startsWith('.') && entry.name !== '.env') continue;
-        if (IGNORED_FOLDERS.has(entry.name)) continue;
+        if (IGNORED_FILES.has(entry.name)) continue;
+        if (entry.isDirectory() && IGNORED_FOLDERS.has(entry.name)) continue;
 
         const fullPath = path.join(dirPath, entry.name);
         if (entry.isDirectory()) {

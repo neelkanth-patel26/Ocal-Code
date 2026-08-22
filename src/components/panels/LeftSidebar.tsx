@@ -111,6 +111,14 @@ export const LeftSidebar: React.FC = () => {
   };
 
   const getFileBadge = (name: string, ext?: string) => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.startsWith('.env')) {
+      return <span className="text-[9px] font-mono font-bold px-1 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">ENV</span>;
+    }
+    if (lowerName === '.gitignore' || lowerName === '.gitattributes') {
+      return <span className="text-[9px] font-mono font-bold px-1 rounded bg-orange-950/60 text-orange-400 border border-orange-800/40">GIT</span>;
+    }
+
     const fileExt = ext || (name.includes('.') ? `.${name.split('.').pop()?.toLowerCase()}` : '');
     switch (fileExt) {
       case '.cpp':
@@ -144,7 +152,25 @@ export const LeftSidebar: React.FC = () => {
       case '.json':
         return <span className="text-[9px] font-mono font-bold px-1 rounded bg-neutral-800 text-neutral-300">JSON</span>;
       case '.md':
+      case '.markdown':
         return <span className="text-[9px] font-mono font-bold px-1 rounded bg-slate-800 text-slate-300">MD</span>;
+      case '.svg':
+      case '.png':
+      case '.jpg':
+      case '.jpeg':
+      case '.ico':
+        return <span className="text-[9px] font-mono font-bold px-1 rounded bg-purple-950/60 text-purple-400 border border-purple-800/40">IMG</span>;
+      case '.sh':
+      case '.bat':
+      case '.cmd':
+      case '.ps1':
+        return <span className="text-[9px] font-mono font-bold px-1 rounded bg-lime-950/60 text-lime-400 border border-lime-800/40">SH</span>;
+      case '.yml':
+      case '.yaml':
+        return <span className="text-[9px] font-mono font-bold px-1 rounded bg-red-950/60 text-red-400 border border-red-800/40">YML</span>;
+      case '.txt':
+      case '.log':
+        return <span className="text-[9px] font-mono font-bold px-1 rounded bg-neutral-800 text-neutral-400">TXT</span>;
       default:
         return <FileText className="w-3.5 h-3.5 text-[#858585]" />;
     }
