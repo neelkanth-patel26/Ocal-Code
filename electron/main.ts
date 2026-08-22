@@ -341,10 +341,13 @@ app.whenReady().then(async () => {
     }
   }
 
+  const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.bmp', '.avif']);
+
   function detectLanguageFromPath(filePath: string): string {
     const ext = path.extname(filePath).toLowerCase();
     const base = path.basename(filePath).toLowerCase();
 
+    if (IMAGE_EXTENSIONS.has(ext) || ext === '.svg') return 'image';
     if (ext === '.json' || base === 'package.json' || base === 'tsconfig.json' || base === 'components.json') return 'json';
     if (ext === '.md' || ext === '.markdown') return 'markdown';
     if (ext === '.py' || ext === '.pyw') return 'python';
@@ -377,9 +380,36 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('fs:read-file-by-path', async (_, filePath: string) => {
     try {
-      const content = await fs.promises.readFile(filePath, 'utf8');
+      const ext = path.extname(filePath).toLowerCase();
       const name = path.basename(filePath);
       const language = detectLanguageFromPath(filePath);
+
+      if (IMAGE_EXTENSIONS.has(ext)) {
+        const buffer = await fs.promises.readFile(filePath);
+        const mimeType =
+          ext === '.png'
+            ? 'image/png'
+            : ext === '.gif'
+            ? 'image/gif'
+            : ext === '.webp'
+            ? 'image/webp'
+            : ext === '.ico'
+            ? 'image/x-icon'
+            : ext === '.bmp'
+            ? 'image/bmp'
+            : ext === '.avif'
+            ? 'image/avif'
+            : 'image/jpeg';
+        const dataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+        return { path: filePath, name, content: dataUrl, language: 'image' };
+      }
+
+      if (ext === '.svg') {
+        const content = await fs.promises.readFile(filePath, 'utf8');
+        return { path: filePath, name, content, language: 'image' };
+      }
+
+      const content = await fs.promises.readFile(filePath, 'utf8');
       return { path: filePath, name, content, language };
     } catch (err) {
       console.error('Error reading file:', filePath, err);

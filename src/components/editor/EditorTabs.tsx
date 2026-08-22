@@ -96,6 +96,8 @@ export const EditorTabs: React.FC = () => {
                   ? 'JSON'
                   : file.language === 'markdown'
                   ? 'MD'
+                  : file.language === 'image'
+                  ? 'IMG'
                   : file.language === 'c'
                   ? 'C'
                   : 'CPP'}

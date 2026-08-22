@@ -10,7 +10,8 @@ export type LanguageTarget =
   | 'html'
   | 'css'
   | 'json'
-  | 'markdown';
+  | 'markdown'
+  | 'image';
 
 export type ThemeName = 'ocal-signature' | 'turbo-nostalgia' | 'modern-dark' | 'modern-light' | 'cyberpunk-neon';
 

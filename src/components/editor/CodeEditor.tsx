@@ -4,6 +4,7 @@ import * as monaco from 'monaco-editor';
 import { useIDEStore } from '../../store/ideStore';
 import { defineMonacoThemes } from '../../themes/monacoThemes';
 import { useCompiler } from '../../hooks/useCompiler';
+import { ImageViewer } from './ImageViewer';
 
 export const CodeEditor: React.FC = () => {
   const { files, activeFileId, updateFileContent, theme, diagnostics, setCursorPos } =
@@ -13,6 +14,10 @@ export const CodeEditor: React.FC = () => {
   const monacoRef = useRef<typeof monaco | null>(null);
 
   const activeFile = files.find((f) => f.id === activeFileId) || files[0];
+
+  const isImage =
+    activeFile?.language === 'image' ||
+    /\.(png|jpg|jpeg|gif|webp|svg|ico|bmp|avif)$/i.test(activeFile?.name || '');
 
   const handleBeforeMount: BeforeMount = (monacoInstance) => {
     defineMonacoThemes(monacoInstance);
@@ -99,6 +104,10 @@ export const CodeEditor: React.FC = () => {
         return 'cpp';
     }
   };
+
+  if (isImage && activeFile) {
+    return <ImageViewer file={activeFile} />;
+  }
 
   return (
     <div className="relative w-full h-full overflow-hidden flex flex-col bg-inherit">
