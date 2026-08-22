@@ -15,6 +15,8 @@ process.env.VITE_PUBLIC = app.isPackaged
   ? process.env.DIST
   : path.join(process.env.DIST, '../public');
 
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+
 let win: BrowserWindow | null;
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 
@@ -65,39 +67,6 @@ app.on('activate', () => {
 
 app.whenReady().then(async () => {
   createWindow();
-
-  // Auto-start Local Live HTTP Web Server on port 5500
-  try {
-    await liveServerManager.start(5500);
-  } catch (err: any) {
-    console.error('Error starting live server:', err.message);
-  }
-
-  // IPC Handlers: Live Server & External Browser
-  ipcMain.handle('live-server:start', async (_, port?: number) => {
-    return await liveServerManager.start(port || 5500);
-  });
-
-  ipcMain.handle('live-server:stop', async () => {
-    return await liveServerManager.stop();
-  });
-
-  ipcMain.handle('live-server:update-files', async (_, files: LiveServerFile[]) => {
-    liveServerManager.updateFiles(files);
-    return true;
-  });
-
-  ipcMain.handle('live-server:status', async () => {
-    return liveServerManager.getStatus();
-  });
-
-  ipcMain.handle('shell:open-external', async (_, url: string) => {
-    if (url) {
-      await shell.openExternal(url);
-      return true;
-    }
-    return false;
-  });
 
   // IPC Handlers: Toolchain & Compiler
   ipcMain.handle('compiler:detect-toolchains', async () => {
