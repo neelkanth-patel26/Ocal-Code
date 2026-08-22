@@ -16,6 +16,17 @@ export const electronAPI = {
   saveFile: (options: { filePath: string; content: string }) =>
     ipcRenderer.invoke('fs:save-file', options),
 
+  // Workspace & Project Folder API
+  openFolderDialog: () => ipcRenderer.invoke('fs:open-folder-dialog'),
+  readFolderTree: (dirPath: string) => ipcRenderer.invoke('fs:read-folder-tree', dirPath),
+  readFileByPath: (filePath: string) => ipcRenderer.invoke('fs:read-file-by-path', filePath),
+  saveFileByPath: (filePath: string, content: string) => ipcRenderer.invoke('fs:save-file-by-path', filePath, content),
+  createFileInWorkspace: (parentPath: string, fileName: string) =>
+    ipcRenderer.invoke('fs:create-file', parentPath, fileName),
+  createFolderInWorkspace: (parentPath: string, folderName: string) =>
+    ipcRenderer.invoke('fs:create-folder', parentPath, folderName),
+  deleteWorkspaceItem: (targetPath: string) => ipcRenderer.invoke('fs:delete-item', targetPath),
+
   // Live Web Server API
   startLiveServer: (port?: number) => ipcRenderer.invoke('live-server:start', port),
   stopLiveServer: () => ipcRenderer.invoke('live-server:stop'),

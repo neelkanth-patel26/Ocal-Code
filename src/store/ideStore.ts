@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   FileItem,
+  FileTreeNode,
   DiagnosticItem,
   CompilerConfig,
   ToolchainInfo,
@@ -24,6 +25,21 @@ interface IDEState {
   saveCurrentFile: () => Promise<void>;
   openFileFromDisk: () => Promise<void>;
   loadTemplate: (templateId: string) => void;
+
+  // Workspace & Project Folders
+  workspacePath: string | null;
+  workspaceName: string | null;
+  workspaceTree: FileTreeNode[];
+  expandedFolders: Record<string, boolean>;
+  isScanningWorkspace: boolean;
+  openFolderFromDisk: () => Promise<void>;
+  closeWorkspace: () => void;
+  refreshWorkspace: () => Promise<void>;
+  toggleFolderExpand: (folderPath: string) => void;
+  openWorkspaceFile: (filePath: string) => Promise<void>;
+  createWorkspaceFile: (parentPath: string, fileName: string) => Promise<boolean>;
+  createWorkspaceFolder: (parentPath: string, folderName: string) => Promise<boolean>;
+  deleteWorkspaceNode: (targetPath: string) => Promise<boolean>;
 
   // Diagnostics
   diagnostics: DiagnosticItem[];
@@ -277,6 +293,155 @@ export const useIDEStore = create<IDEState>((set, get) => ({
         }
       }
     }
+  },
+
+  // Workspace & Project Folders
+  workspacePath: null,
+  workspaceName: null,
+  workspaceTree: [],
+  expandedFolders: {},
+  isScanningWorkspace: false,
+
+  openFolderFromDisk: async () => {
+    if (window.electronAPI) {
+      const selectedPath = await window.electronAPI.openFolderDialog();
+      if (!selectedPath) return;
+
+      set({ isScanningWorkspace: true, showProjectLauncher: false });
+      try {
+        const tree = await window.electronAPI.readFolderTree(selectedPath);
+        const folderName = selectedPath.split(/[/\\]/).filter(Boolean).pop() || 'Project';
+        
+        const newExpanded: Record<string, boolean> = { [selectedPath]: true };
+
+        set({
+          workspacePath: selectedPath,
+          workspaceName: folderName,
+          workspaceTree: tree,
+          expandedFolders: newExpanded,
+          isScanningWorkspace: false,
+          showProjectLauncher: false,
+          sidebarOpen: true,
+          sidebarTab: 'explorer',
+        });
+
+        const findFirstFile = (nodes: FileTreeNode[]): FileTreeNode | null => {
+          for (const node of nodes) {
+            if (!node.isDirectory) return node;
+            if (node.children) {
+              const child = findFirstFile(node.children);
+              if (child) return child;
+            }
+          }
+          return null;
+        };
+
+        const firstFile = findFirstFile(tree);
+        if (firstFile) {
+          await get().openWorkspaceFile(firstFile.path);
+        }
+      } catch (err) {
+        console.error('Failed to open workspace folder:', err);
+        set({ isScanningWorkspace: false });
+      }
+    }
+  },
+
+  closeWorkspace: () => {
+    set({
+      workspacePath: null,
+      workspaceName: null,
+      workspaceTree: [],
+      expandedFolders: {},
+    });
+  },
+
+  refreshWorkspace: async () => {
+    const { workspacePath } = get();
+    if (!workspacePath || !window.electronAPI) return;
+    set({ isScanningWorkspace: true });
+    try {
+      const tree = await window.electronAPI.readFolderTree(workspacePath);
+      set({ workspaceTree: tree, isScanningWorkspace: false });
+    } catch (err) {
+      console.error('Failed to refresh workspace:', err);
+      set({ isScanningWorkspace: false });
+    }
+  },
+
+  toggleFolderExpand: (folderPath: string) => {
+    set((state) => ({
+      expandedFolders: {
+        ...state.expandedFolders,
+        [folderPath]: !state.expandedFolders[folderPath],
+      },
+    }));
+  },
+
+  openWorkspaceFile: async (filePath: string) => {
+    if (!window.electronAPI) return;
+    const existing = get().files.find((f) => f.path === filePath);
+    if (existing) {
+      set({ activeFileId: existing.id, showProjectLauncher: false });
+      return;
+    }
+
+    const fileData = await window.electronAPI.readFileByPath(filePath);
+    if (fileData) {
+      const newFile: FileItem = {
+        id: `file-ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: fileData.name,
+        path: fileData.path,
+        content: fileData.content,
+        language: fileData.language,
+        isDirty: false,
+      };
+
+      set((state) => ({
+        files: [...state.files, newFile],
+        activeFileId: newFile.id,
+        showProjectLauncher: false,
+      }));
+    }
+  },
+
+  createWorkspaceFile: async (parentPath: string, fileName: string) => {
+    if (!window.electronAPI) return false;
+    const ok = await window.electronAPI.createFileInWorkspace(parentPath, fileName);
+    if (ok) {
+      await get().refreshWorkspace();
+      const newFilePath = `${parentPath}/${fileName}`.replace(/\\/g, '/');
+      await get().openWorkspaceFile(newFilePath);
+      return true;
+    }
+    return false;
+  },
+
+  createWorkspaceFolder: async (parentPath: string, folderName: string) => {
+    if (!window.electronAPI) return false;
+    const ok = await window.electronAPI.createFolderInWorkspace(parentPath, folderName);
+    if (ok) {
+      set((state) => ({
+        expandedFolders: { ...state.expandedFolders, [parentPath]: true },
+      }));
+      await get().refreshWorkspace();
+      return true;
+    }
+    return false;
+  },
+
+  deleteWorkspaceNode: async (targetPath: string) => {
+    if (!window.electronAPI) return false;
+    const ok = await window.electronAPI.deleteWorkspaceItem(targetPath);
+    if (ok) {
+      const openFile = get().files.find((f) => f.path === targetPath);
+      if (openFile) {
+        get().closeFile(openFile.id);
+      }
+      await get().refreshWorkspace();
+      return true;
+    }
+    return false;
   },
 
   loadTemplate: (templateId: string) => {

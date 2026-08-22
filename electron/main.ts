@@ -272,4 +272,154 @@ app.whenReady().then(async () => {
     await fs.promises.writeFile(options.filePath, options.content, 'utf8');
     return true;
   });
+
+  // ========================================================
+  // WORKSPACE FOLDER & MULTI-FILE PROJECT HANDLERS
+  // ========================================================
+  const IGNORED_FOLDERS = new Set([
+    'node_modules',
+    '.git',
+    'dist',
+    'dist-electron',
+    'build',
+    'release',
+    '.next',
+    'temp',
+    '__pycache__',
+    '.vscode',
+    '.idea',
+    'bin',
+    'obj',
+  ]);
+
+  async function scanDirectoryTree(dirPath: string, depth = 0, maxDepth = 6): Promise<any[]> {
+    if (depth > maxDepth) return [];
+    try {
+      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      const nodes = [];
+
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') && entry.name !== '.env') continue;
+        if (IGNORED_FOLDERS.has(entry.name)) continue;
+
+        const fullPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          const children = await scanDirectoryTree(fullPath, depth + 1, maxDepth);
+          nodes.push({
+            path: fullPath,
+            name: entry.name,
+            isDirectory: true,
+            children,
+          });
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          nodes.push({
+            path: fullPath,
+            name: entry.name,
+            isDirectory: false,
+            extension: ext,
+          });
+        }
+      }
+
+      return nodes.sort((a, b) => {
+        if (a.isDirectory === b.isDirectory) {
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        }
+        return a.isDirectory ? -1 : 1;
+      });
+    } catch (err) {
+      console.error('Error scanning folder:', dirPath, err);
+      return [];
+    }
+  }
+
+  function detectLanguageFromPath(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.py' || ext === '.pyw') return 'python';
+    if (ext === '.java') return 'java';
+    if (ext === '.html' || ext === '.htm') return 'html';
+    if (ext === '.css' || ext === '.scss' || ext === '.sass' || ext === '.less') return 'css';
+    if (ext === '.js' || ext === '.mjs' || ext === '.cjs') return 'javascript';
+    if (ext === '.ts') return 'typescript';
+    if (ext === '.tsx' || ext === '.jsx') return 'react';
+    if (ext === '.c') return 'c';
+    return 'cpp';
+  }
+
+  ipcMain.handle('fs:open-folder-dialog', async () => {
+    if (!win) return null;
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openDirectory'],
+      title: 'Open Project Folder - Ocal Code',
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('fs:read-folder-tree', async (_, dirPath: string) => {
+    return await scanDirectoryTree(dirPath);
+  });
+
+  ipcMain.handle('fs:read-file-by-path', async (_, filePath: string) => {
+    try {
+      const content = await fs.promises.readFile(filePath, 'utf8');
+      const name = path.basename(filePath);
+      const language = detectLanguageFromPath(filePath);
+      return { path: filePath, name, content, language };
+    } catch (err) {
+      console.error('Error reading file:', filePath, err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('fs:save-file-by-path', async (_, filePath: string, content: string) => {
+    try {
+      await fs.promises.writeFile(filePath, content, 'utf8');
+      return true;
+    } catch (err) {
+      console.error('Error saving file:', filePath, err);
+      return false;
+    }
+  });
+
+  ipcMain.handle('fs:create-file', async (_, parentPath: string, fileName: string) => {
+    try {
+      const fullPath = path.join(parentPath, fileName);
+      await fs.promises.writeFile(fullPath, '', { flag: 'wx' });
+      return true;
+    } catch (err) {
+      console.error('Error creating file:', parentPath, fileName, err);
+      return false;
+    }
+  });
+
+  ipcMain.handle('fs:create-folder', async (_, parentPath: string, folderName: string) => {
+    try {
+      const fullPath = path.join(parentPath, folderName);
+      await fs.promises.mkdir(fullPath, { recursive: true });
+      return true;
+    } catch (err) {
+      console.error('Error creating directory:', parentPath, folderName, err);
+      return false;
+    }
+  });
+
+  ipcMain.handle('fs:delete-item', async (_, targetPath: string) => {
+    try {
+      const stat = await fs.promises.stat(targetPath);
+      if (stat.isDirectory()) {
+        await fs.promises.rm(targetPath, { recursive: true, force: true });
+      } else {
+        await fs.promises.unlink(targetPath);
+      }
+      return true;
+    } catch (err) {
+      console.error('Error deleting item:', targetPath, err);
+      return false;
+    }
+  });
 });

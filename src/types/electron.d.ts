@@ -35,6 +35,14 @@ export interface ElectronAPI {
   saveFileDialog: (options: { defaultName: string; content: string; language?: LanguageTarget }) => Promise<{ path: string; name: string } | null>;
   saveFile: (options: { filePath: string; content: string }) => Promise<boolean>;
 
+  openFolderDialog: () => Promise<string | null>;
+  readFolderTree: (dirPath: string) => Promise<import('./ide').FileTreeNode[]>;
+  readFileByPath: (filePath: string) => Promise<{ path: string; name: string; content: string; language: LanguageTarget } | null>;
+  saveFileByPath: (filePath: string, content: string) => Promise<boolean>;
+  createFileInWorkspace: (parentPath: string, fileName: string) => Promise<boolean>;
+  createFolderInWorkspace: (parentPath: string, folderName: string) => Promise<boolean>;
+  deleteWorkspaceItem: (targetPath: string) => Promise<boolean>;
+
   startLiveServer: (port?: number) => Promise<{ port: number; url: string }>;
   stopLiveServer: () => Promise<void>;
   updateLiveServerFiles: (files: Array<{ name: string; content: string; language?: string }>) => Promise<boolean>;

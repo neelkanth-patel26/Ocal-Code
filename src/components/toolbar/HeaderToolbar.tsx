@@ -6,6 +6,7 @@ import {
   Hammer,
   Square,
   FolderOpen,
+  FolderPlus,
   Save,
   Plus,
   HelpCircle,
@@ -25,6 +26,8 @@ export const HeaderToolbar: React.FC = () => {
     activeFileId,
     updateFileContent,
     addNewFile,
+    openFolderFromDisk,
+    workspaceName,
     theme,
     setTheme,
     isCompiling,
@@ -103,7 +106,7 @@ export const HeaderToolbar: React.FC = () => {
 
             {/* Workspace Breadcrumbs */}
             <div className={`hidden lg:flex items-center gap-1.5 text-xs text-[#858585] pl-2 border-l ${isOcalTheme ? 'border-[#252536]' : 'border-[#2b2b2b]'}`}>
-              <span>workspace</span>
+              <span>{workspaceName || 'workspace'}</span>
               <ChevronRight className="w-3.5 h-3.5 text-[#555555]" />
               <span className="text-[#e0e0e0] font-mono font-medium truncate max-w-[150px]">
                 {activeFile?.name || 'main.cpp'}
@@ -123,6 +126,18 @@ export const HeaderToolbar: React.FC = () => {
                 title="New File (Ctrl+N)"
               >
                 <Plus className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => openFolderFromDisk()}
+                className={`p-1 rounded transition-colors cursor-pointer ${
+                  isOcalTheme
+                    ? 'hover:bg-[#181920] text-[#858585] hover:text-[#34d058]'
+                    : 'hover:bg-[#252525] text-[#858585] hover:text-white'
+                }`}
+                title="Open Project Folder"
+              >
+                <FolderPlus className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"

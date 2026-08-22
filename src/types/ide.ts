@@ -66,3 +66,12 @@ export interface BuildResult {
 }
 
 export type BottomTabType = 'terminal' | 'build-output' | 'problems' | 'assembly' | 'live-server';
+
+export interface FileTreeNode {
+  path: string;
+  name: string;
+  isDirectory: boolean;
+  children?: FileTreeNode[];
+  size?: number;
+  extension?: string;
+}

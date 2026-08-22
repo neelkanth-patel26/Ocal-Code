@@ -10,6 +10,7 @@ import {
   Terminal,
   Cpu,
   FolderOpen,
+  FolderPlus,
   Plus,
   Sparkles,
   FileText,
@@ -32,7 +33,7 @@ interface ProjectTypeOption {
 }
 
 export const ProjectLauncher: React.FC = () => {
-  const { addNewFile, loadTemplate, openFileFromDisk, theme } = useIDEStore();
+  const { addNewFile, loadTemplate, openFileFromDisk, openFolderFromDisk, theme } = useIDEStore();
 
   const isTurboTheme = theme === 'turbo-nostalgia';
 
@@ -229,7 +230,24 @@ export const ProjectLauncher: React.FC = () => {
         </div>
 
         {/* Quick Blank / Open Disk Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+          <div
+            onClick={() => openFolderFromDisk()}
+            className={`p-3.5 rounded-lg border cursor-pointer transition-colors flex items-center gap-3 ${
+              isTurboTheme
+                ? 'bg-[#000077] border-[#55FFFF] hover:bg-[#000088]'
+                : 'bg-[#1e1e1e] border-[#34d058]/40 hover:border-[#34d058] hover:bg-[#252525]'
+            }`}
+          >
+            <div className="p-2 rounded bg-[#34d058]/20 text-[#34d058]">
+              <FolderPlus className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-white">Open Project Folder</div>
+              <div className="text-[11px] text-[#858585]">Load entire codebase</div>
+            </div>
+          </div>
+
           <div
             onClick={() => handleStartBlank('cpp')}
             className={`p-3.5 rounded-lg border cursor-pointer transition-colors flex items-center gap-3 ${
@@ -276,8 +294,8 @@ export const ProjectLauncher: React.FC = () => {
               <FolderOpen className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-semibold text-white">Open Existing File</div>
-              <div className="text-[11px] text-[#858585]">Load from your computer</div>
+              <div className="text-xs font-semibold text-white">Open Single File</div>
+              <div className="text-[11px] text-[#858585]">Load from computer</div>
             </div>
           </div>
         </div>
