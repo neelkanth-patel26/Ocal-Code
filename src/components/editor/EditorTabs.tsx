@@ -49,8 +49,56 @@ export const EditorTabs: React.FC = () => {
                   : 'bg-[#181818] text-[#858585] hover:bg-[#1f1f1f] hover:text-[#cccccc] border-[#2b2b2b]'
               }`}
             >
-              <span className={`text-[10px] font-semibold ${isTurboTheme ? 'text-[#55FFFF]' : 'text-[#858585]'}`}>
-                {isTurboTheme ? `${idx + 1}` : isCpp ? 'CPP' : 'C'}
+              <span className={`text-[9px] font-mono font-bold px-1 rounded ${
+                isTurboTheme
+                  ? 'text-[#55FFFF]'
+                  : file.language === 'python'
+                  ? 'bg-amber-950/60 text-amber-400'
+                  : file.language === 'java'
+                  ? 'bg-orange-950/60 text-orange-400'
+                  : file.language === 'javascript'
+                  ? 'bg-yellow-950/60 text-yellow-400'
+                  : file.language === 'typescript'
+                  ? 'bg-sky-950/60 text-sky-400'
+                  : file.language === 'react' || file.language === 'nextjs'
+                  ? 'bg-cyan-950/60 text-cyan-400'
+                  : file.language === 'html'
+                  ? 'bg-rose-950/60 text-rose-400'
+                  : file.language === 'css'
+                  ? 'bg-teal-950/60 text-teal-400'
+                  : file.language === 'json'
+                  ? 'bg-neutral-800 text-neutral-300'
+                  : file.language === 'markdown'
+                  ? 'bg-slate-800 text-slate-300'
+                  : file.language === 'c'
+                  ? 'bg-blue-950/60 text-blue-400'
+                  : 'bg-indigo-950/60 text-indigo-400'
+              }`}>
+                {isTurboTheme
+                  ? `${idx + 1}`
+                  : file.language === 'typescript'
+                  ? 'TS'
+                  : file.language === 'react'
+                  ? 'REACT'
+                  : file.language === 'nextjs'
+                  ? 'NEXT'
+                  : file.language === 'javascript'
+                  ? 'JS'
+                  : file.language === 'python'
+                  ? 'PY'
+                  : file.language === 'java'
+                  ? 'JAVA'
+                  : file.language === 'html'
+                  ? 'HTML'
+                  : file.language === 'css'
+                  ? 'CSS'
+                  : file.language === 'json'
+                  ? 'JSON'
+                  : file.language === 'markdown'
+                  ? 'MD'
+                  : file.language === 'c'
+                  ? 'C'
+                  : 'CPP'}
               </span>
 
               <span className="truncate max-w-[150px]">{file.name}</span>

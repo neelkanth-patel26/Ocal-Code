@@ -73,6 +73,10 @@ export const CodeEditor: React.FC = () => {
 
   const getMonacoLanguage = (lang?: string, fileName?: string): string => {
     switch (lang) {
+      case 'json':
+        return 'json';
+      case 'markdown':
+        return 'markdown';
       case 'html':
         return 'html';
       case 'css':

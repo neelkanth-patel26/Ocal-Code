@@ -8,6 +8,13 @@ export const electronAPI = {
   sendInput: (input: string) => ipcRenderer.invoke('compiler:send-input', input),
   writeTerminal: (data: string) => ipcRenderer.invoke('terminal:write', data),
   killProcess: () => ipcRenderer.invoke('compiler:kill'),
+
+  // Interactive General Shell Terminal Session
+  startTerminalSession: (cwd?: string) => ipcRenderer.invoke('terminal:start-session', cwd),
+  sendTerminalInput: (data: string) => ipcRenderer.invoke('terminal:send-data', data),
+  restartTerminalSession: (cwd?: string) => ipcRenderer.invoke('terminal:restart-session', cwd),
+  killTerminalProcess: () => ipcRenderer.invoke('terminal:kill-session'),
+
   generateAssembly: (options: any) => ipcRenderer.invoke('compiler:generate-assembly', options),
 
   openFileDialog: () => ipcRenderer.invoke('fs:open-file-dialog'),

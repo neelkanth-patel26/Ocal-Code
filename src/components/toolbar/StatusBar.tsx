@@ -129,9 +129,35 @@ export const StatusBar: React.FC = () => {
               type="button"
               onClick={() => setShowSettingsModal(true)}
               className="hover:text-white text-[#cccccc] font-medium transition-colors font-mono cursor-pointer"
-              title="Click to change C/C++ Standard"
+              title="Click to view toolchain settings"
             >
-              <span>{activeFile ? activeFile.language.toUpperCase() : 'CPP'} ({compilerConfig.standard})</span>
+              <span>
+                {activeFile?.language === 'cpp'
+                  ? `C++ (${compilerConfig.standard})`
+                  : activeFile?.language === 'c'
+                  ? `C (${compilerConfig.standard})`
+                  : activeFile?.language === 'typescript'
+                  ? 'TypeScript'
+                  : activeFile?.language === 'react'
+                  ? 'React (TSX)'
+                  : activeFile?.language === 'nextjs'
+                  ? 'Next.js'
+                  : activeFile?.language === 'javascript'
+                  ? 'JavaScript'
+                  : activeFile?.language === 'python'
+                  ? 'Python 3'
+                  : activeFile?.language === 'java'
+                  ? 'Java'
+                  : activeFile?.language === 'html'
+                  ? 'HTML5'
+                  : activeFile?.language === 'css'
+                  ? 'CSS3'
+                  : activeFile?.language === 'json'
+                  ? 'JSON'
+                  : activeFile?.language === 'markdown'
+                  ? 'Markdown'
+                  : 'CPP'}
+              </span>
             </button>
 
             <span className="text-[#333333]">|</span>

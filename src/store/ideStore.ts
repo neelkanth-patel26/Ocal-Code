@@ -148,16 +148,26 @@ const getDefaultLanguageInfo = (lang: LanguageTarget): { ext: string; content: s
         ext: '.tsx',
         content: '// Next.js App Router Page\nimport React from "react";\n\nexport default function Page() {\n  return (\n    <main className="p-8">\n      <h1 className="text-2xl font-bold">Next.js Page</h1>\n      <p>Rendered with Ocal++ Studio</p>\n    </main>\n  );\n}\n',
       };
+    case 'json':
+      return {
+        ext: '.json',
+        content: '{\n  "name": "project",\n  "version": "1.0.0"\n}\n',
+      };
+    case 'markdown':
+      return {
+        ext: '.md',
+        content: '# Documentation\n\nWelcome to Ocal Code.\n',
+      };
     case 'c':
       return {
         ext: '.c',
-        content: '#include <stdio.h>\n\nint main(void) {\n    printf("Hello from Ocal++ C!\\n");\n    return 0;\n}\n',
+        content: '#include <stdio.h>\n\nint main(void) {\n    printf("Hello from Ocal Code C!\\n");\n    return 0;\n}\n',
       };
     case 'cpp':
     default:
       return {
         ext: '.cpp',
-        content: '#include <iostream>\n\nint main() {\n    std::cout << "Hello from Ocal++ C++!\\n";\n    return 0;\n}\n',
+        content: '#include <iostream>\n\nint main() {\n    std::cout << "Hello from Ocal Code C++!\\n";\n    return 0;\n}\n',
       };
   }
 };

@@ -8,7 +8,9 @@ export type LanguageTarget =
   | 'react'
   | 'nextjs'
   | 'html'
-  | 'css';
+  | 'css'
+  | 'json'
+  | 'markdown';
 
 export type ThemeName = 'ocal-signature' | 'turbo-nostalgia' | 'modern-dark' | 'modern-light' | 'cyberpunk-neon';
 

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { compilerManager, CompileOptions } from './compiler';
 import { liveServerManager, LiveServerFile } from './liveServer';
@@ -136,6 +137,84 @@ app.whenReady().then(async () => {
     return await compilerManager.generateAssembly(options);
   });
 
+  // ========================================================
+  // PERSISTENT INTERACTIVE TERMINAL SHELL (PowerShell / cmd)
+  // ========================================================
+  let activeShellProcess: any = null;
+
+  function startShellSession(cwd?: string) {
+    if (activeShellProcess) {
+      try {
+        activeShellProcess.kill();
+      } catch {}
+      activeShellProcess = null;
+    }
+
+    const workDir = cwd && fs.existsSync(cwd) ? cwd : process.cwd();
+    const isWindows = process.platform === 'win32';
+    const shellExe = isWindows ? (process.env.COMSPEC || 'cmd.exe') : (process.env.SHELL || '/bin/bash');
+    
+    // Spawn interactive shell with inherit environment and UTF-8 support
+    const shellEnv = {
+      ...process.env,
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+      PYTHONUNBUFFERED: '1',
+    };
+
+    try {
+      activeShellProcess = spawn(shellExe, [], {
+        cwd: workDir,
+        env: shellEnv,
+        shell: false,
+      });
+
+      activeShellProcess.stdout?.on('data', (data: Buffer) => {
+        win?.webContents.send('terminal:data', data.toString());
+      });
+
+      activeShellProcess.stderr?.on('data', (data: Buffer) => {
+        win?.webContents.send('terminal:data', data.toString());
+      });
+
+      activeShellProcess.on('close', (code: number | null) => {
+        win?.webContents.send('terminal:data', `\r\n[Terminal session ended with exit code ${code}]\r\n`);
+        activeShellProcess = null;
+      });
+
+      return true;
+    } catch (err) {
+      console.error('Failed to spawn interactive shell:', err);
+      return false;
+    }
+  }
+
+  ipcMain.handle('terminal:start-session', async (_, cwd?: string) => {
+    return startShellSession(cwd);
+  });
+
+  ipcMain.handle('terminal:send-data', async (_, data: string) => {
+    if (activeShellProcess && activeShellProcess.stdin && activeShellProcess.stdin.writable) {
+      activeShellProcess.stdin.write(data);
+      return true;
+    }
+    return compilerManager.sendInputToProcess(data);
+  });
+
+  ipcMain.handle('terminal:restart-session', async (_, cwd?: string) => {
+    return startShellSession(cwd);
+  });
+
+  ipcMain.handle('terminal:kill-session', async () => {
+    if (activeShellProcess) {
+      try {
+        activeShellProcess.kill();
+      } catch {}
+      activeShellProcess = null;
+    }
+    return compilerManager.killRunningProcess();
+  });
+
   ipcMain.handle('terminal:write', async (_, data: string) => {
     win?.webContents.send('terminal:data', data);
     return true;
@@ -149,13 +228,13 @@ app.whenReady().then(async () => {
       filters: [
         {
           name: 'All Supported Source Files',
-          extensions: ['html', 'htm', 'css', 'js', 'ts', 'tsx', 'jsx', 'py', 'java', 'cpp', 'c', 'h', 'hpp', 'json', 'txt'],
+          extensions: ['html', 'htm', 'css', 'js', 'ts', 'tsx', 'jsx', 'py', 'java', 'cpp', 'c', 'h', 'hpp', 'json', 'md', 'txt'],
         },
-        { name: 'HTML Web Documents (*.html, *.htm)', extensions: ['html', 'htm'] },
-        { name: 'CSS Stylesheets (*.css)', extensions: ['css'] },
+        { name: 'JavaScript & TypeScript (*.js, *.ts, *.tsx, *.jsx)', extensions: ['js', 'ts', 'tsx', 'jsx'] },
+        { name: 'HTML & CSS (*.html, *.htm, *.css)', extensions: ['html', 'htm', 'css'] },
+        { name: 'JSON & Markdown (*.json, *.md)', extensions: ['json', 'md'] },
         { name: 'Python Scripts (*.py)', extensions: ['py', 'pyw'] },
         { name: 'Java Source Files (*.java)', extensions: ['java'] },
-        { name: 'JavaScript & TypeScript (*.js, *.ts, *.tsx, *.jsx)', extensions: ['js', 'ts', 'tsx', 'jsx'] },
         { name: 'C/C++ Source Files (*.cpp, *.c, *.h, *.hpp)', extensions: ['cpp', 'c', 'cc', 'cxx', 'h', 'hpp'] },
         { name: 'All Files (*.*)', extensions: ['*'] },
       ],
@@ -168,18 +247,7 @@ app.whenReady().then(async () => {
     const filePath = result.filePaths[0];
     const content = await fs.promises.readFile(filePath, 'utf8');
     const name = path.basename(filePath);
-    const ext = path.extname(filePath).toLowerCase();
-    
-    let language = 'cpp';
-    if (ext === '.html' || ext === '.htm') language = 'html';
-    else if (ext === '.css') language = 'css';
-    else if (ext === '.py' || ext === '.pyw') language = 'python';
-    else if (ext === '.java') language = 'java';
-    else if (ext === '.js' || ext === '.mjs' || ext === '.cjs') language = 'javascript';
-    else if (ext === '.ts') language = 'typescript';
-    else if (ext === '.tsx' || ext === '.jsx') language = 'react';
-    else if (ext === '.c') language = 'c';
-    else language = 'cpp';
+    const language = detectLanguageFromPath(filePath);
 
     return {
       path: filePath,
@@ -336,14 +404,18 @@ app.whenReady().then(async () => {
 
   function detectLanguageFromPath(filePath: string): string {
     const ext = path.extname(filePath).toLowerCase();
+    const base = path.basename(filePath).toLowerCase();
+
+    if (ext === '.json' || base === 'package.json' || base === 'tsconfig.json' || base === 'components.json') return 'json';
+    if (ext === '.md' || ext === '.markdown') return 'markdown';
     if (ext === '.py' || ext === '.pyw') return 'python';
     if (ext === '.java') return 'java';
     if (ext === '.html' || ext === '.htm') return 'html';
     if (ext === '.css' || ext === '.scss' || ext === '.sass' || ext === '.less') return 'css';
-    if (ext === '.js' || ext === '.mjs' || ext === '.cjs') return 'javascript';
-    if (ext === '.ts') return 'typescript';
     if (ext === '.tsx' || ext === '.jsx') return 'react';
-    if (ext === '.c') return 'c';
+    if (ext === '.ts' || filePath.endsWith('.d.ts')) return 'typescript';
+    if (ext === '.js' || ext === '.mjs' || ext === '.cjs') return 'javascript';
+    if (ext === '.c' || ext === '.h') return 'c';
     return 'cpp';
   }
 

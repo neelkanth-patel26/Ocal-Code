@@ -23,6 +23,13 @@ export interface ElectronAPI {
   sendInput: (input: string) => Promise<boolean>;
   writeTerminal: (data: string) => Promise<boolean>;
   killProcess: () => Promise<boolean>;
+
+  // Interactive General Shell Terminal Session
+  startTerminalSession: (cwd?: string) => Promise<boolean>;
+  sendTerminalInput: (data: string) => Promise<boolean>;
+  restartTerminalSession: (cwd?: string) => Promise<boolean>;
+  killTerminalProcess: () => Promise<boolean>;
+
   generateAssembly: (options: {
     sourceCode: string;
     fileName: string;

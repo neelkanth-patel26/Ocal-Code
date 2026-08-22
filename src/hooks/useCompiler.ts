@@ -270,8 +270,24 @@ export function useCompiler() {
   // Compile and Run (F5)
   const compileAndRun = useCallback(async () => {
     const activeFile = getActiveFile();
-    if (activeFile?.language === 'html' || activeFile?.language === 'css') {
+    if (!activeFile) return;
+
+    if (activeFile.language === 'html' || activeFile.language === 'css') {
       setActiveBottomTab('live-server');
+      return;
+    }
+
+    if (activeFile.language === 'react' || activeFile.language === 'nextjs') {
+      // If project has package.json or is web app, run npm run dev in terminal
+      setActiveBottomTab('terminal');
+      if (window.electronAPI) {
+        window.electronAPI.sendTerminalInput('npm run dev\r\n');
+      }
+      return;
+    }
+
+    if (activeFile.language === 'json' || activeFile.language === 'markdown') {
+      addBuildLog(`[Info] ${activeFile.name} is a structured data/document file.`);
       return;
     }
 

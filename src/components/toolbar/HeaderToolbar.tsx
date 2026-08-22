@@ -57,6 +57,8 @@ export const HeaderToolbar: React.FC = () => {
     else if (newLang === 'html') ext = '.html';
     else if (newLang === 'css') ext = '.css';
     else if (newLang === 'react' || newLang === 'nextjs') ext = '.tsx';
+    else if (newLang === 'json') ext = '.json';
+    else if (newLang === 'markdown') ext = '.md';
 
     const newName = newLang === 'java' ? 'Main.java' : newLang === 'html' ? 'index.html' : `${baseName || 'source'}${ext}`;
     activeFile.language = newLang;
@@ -271,6 +273,8 @@ export const HeaderToolbar: React.FC = () => {
             <option value="typescript" className="bg-[#202020] text-white">TypeScript</option>
             <option value="react" className="bg-[#202020] text-white">React (TSX)</option>
             <option value="nextjs" className="bg-[#202020] text-white">Next.js</option>
+            <option value="json" className="bg-[#202020] text-white">JSON</option>
+            <option value="markdown" className="bg-[#202020] text-white">Markdown</option>
           </select>
         </div>
       </div>
