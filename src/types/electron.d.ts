@@ -60,6 +60,18 @@ export interface ElectronAPI {
 
   onTerminalData: (callback: (data: string) => void) => () => void;
   onProcessExit: (callback: (data: { code: number | null; signal: string | null }) => void) => () => void;
+
+  // Auto-Update API (Ocal Browser Pattern)
+  checkForUpdates: () => Promise<{
+    updateAvailable: boolean;
+    currentVersion: string;
+    latestVersion?: string;
+    notes?: string;
+    url?: string;
+  } | null>;
+  downloadUpdate: () => Promise<string>;
+  applyUpdate: (installerPath: string) => void;
+  onUpdateDownloadProgress: (callback: (progress: { percent: number; loaded: string; total: string }) => void) => () => void;
 }
 
 declare global {

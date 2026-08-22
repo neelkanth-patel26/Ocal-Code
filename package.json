@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "electron:dev": "vite",
     "prebuild:compiler": "node scripts/bundle-toolchain.js",
-    "electron:build": "node scripts/bundle-toolchain.js && tsc && vite build && electron-builder"
+    "electron:build": "node scripts/bundle-toolchain.js && tsc && vite build && electron-builder",
+    "build-inno": "powershell -ExecutionPolicy Bypass -File build-dist.ps1"
   },
   "build": {
     "appId": "com.gamingnetwork.ocalcode",

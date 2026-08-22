@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, net } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
@@ -487,5 +487,190 @@ app.whenReady().then(async () => {
   ipcMain.handle('shell:open-external', async (_, url: string) => {
     await shell.openExternal(url);
     return true;
+  });
+
+  // ========================================================
+  // AUTO UPDATE & GITHUB RELEASE CHECKER (Ocal Browser Pattern)
+  // ========================================================
+  function isNewerVersion(latest: string, current: string): boolean {
+    const cleanLatest = latest.replace(/^v/, '').split('.').map((x) => parseInt(x, 10) || 0);
+    const cleanCurrent = current.replace(/^v/, '').split('.').map((x) => parseInt(x, 10) || 0);
+
+    for (let i = 0; i < Math.max(cleanLatest.length, cleanCurrent.length); i++) {
+      const l = cleanLatest[i] || 0;
+      const c = cleanCurrent[i] || 0;
+      if (l > c) return true;
+      if (l < c) return false;
+    }
+    return false;
+  }
+
+  ipcMain.handle('check-for-update', async () => {
+    return new Promise((resolve) => {
+      let resolved = false;
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve({
+            updateAvailable: false,
+            currentVersion: app.getVersion(),
+          });
+        }
+      }, 12000);
+
+      try {
+        const request = net.request({
+          method: 'GET',
+          url: 'https://api.github.com/repos/neelkanth-patel26/Ocal-Code/releases/latest',
+          redirect: 'follow',
+        });
+        request.setHeader('User-Agent', 'Ocal-Code');
+        request.on('response', (response) => {
+          let data = '';
+          response.on('data', (chunk) => (data += chunk.toString()));
+          response.on('end', () => {
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeout);
+              if (response.statusCode === 200) {
+                try {
+                  const json = JSON.parse(data);
+                  const latest = json.tag_name ? json.tag_name.replace(/^v/, '') : '1.0.0';
+                  const current = app.getVersion();
+                  const updateAvailable = isNewerVersion(latest, current);
+
+                  resolve({
+                    updateAvailable,
+                    currentVersion: current,
+                    latestVersion: latest,
+                    notes: json.body || '',
+                    url: json.html_url || '',
+                  });
+                } catch {
+                  resolve({ updateAvailable: false, currentVersion: app.getVersion() });
+                }
+              } else {
+                resolve({ updateAvailable: false, currentVersion: app.getVersion() });
+              }
+            }
+          });
+        });
+        request.on('error', () => {
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeout);
+            resolve({ updateAvailable: false, currentVersion: app.getVersion() });
+          }
+        });
+        request.end();
+      } catch {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeout);
+          resolve({ updateAvailable: false, currentVersion: app.getVersion() });
+        }
+      }
+    });
+  });
+
+  ipcMain.handle('download-update', async () => {
+    const downloadWithRetry = async (url: string, dest: string, retries = 3): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const attempt = (remaining: number) => {
+          const request = net.request({
+            method: 'GET',
+            url,
+            redirect: 'follow',
+          });
+          request.setHeader('User-Agent', 'Ocal-Code');
+          request.on('response', (response) => {
+            if (response.statusCode !== 200) {
+              if (remaining > 0) return setTimeout(() => attempt(remaining - 1), 2000);
+              return reject(new Error(`Download failed with HTTP ${response.statusCode}`));
+            }
+
+            const totalBytes = parseInt(response.headers['content-length'] as string, 10) || 1;
+            let receivedBytes = 0;
+            const fileStream = fs.createWriteStream(dest);
+
+            response.on('data', (chunk) => {
+              receivedBytes += chunk.length;
+              fileStream.write(chunk);
+              const progress = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
+              if (win) {
+                win.webContents.send('update-download-progress', {
+                  percent: progress,
+                  loaded: (receivedBytes / (1024 * 1024)).toFixed(1),
+                  total: (totalBytes / (1024 * 1024)).toFixed(1),
+                });
+              }
+            });
+
+            response.on('end', () => {
+              fileStream.end();
+              resolve(dest);
+            });
+          });
+          request.on('error', (err) => {
+            if (remaining > 0) return setTimeout(() => attempt(remaining - 1), 2000);
+            reject(err);
+          });
+          request.end();
+        };
+        attempt(retries);
+      });
+    };
+
+    return new Promise((resolve, reject) => {
+      const request = net.request({
+        method: 'GET',
+        url: 'https://api.github.com/repos/neelkanth-patel26/Ocal-Code/releases/latest',
+        redirect: 'follow',
+      });
+      request.setHeader('User-Agent', 'Ocal-Code');
+      request.on('response', (response) => {
+        let data = '';
+        response.on('data', (chunk) => (data += chunk.toString()));
+        response.on('end', async () => {
+          if (response.statusCode === 200) {
+            try {
+              const json = JSON.parse(data);
+              let asset = json.assets?.find(
+                (a: any) =>
+                  a.name.startsWith('Ocal-Code-') &&
+                  a.name.endsWith('.exe') &&
+                  (a.name.includes('Setup') || a.name.includes('setup'))
+              );
+              if (!asset) {
+                asset = json.assets?.find((a: any) => a.name.endsWith('.exe'));
+              }
+              if (!asset) {
+                return reject(new Error('No compatible Ocal Code Windows installer found in latest release.'));
+              }
+
+              const tempPath = path.join(app.getPath('temp'), asset.name);
+              resolve(await downloadWithRetry(asset.browser_download_url, tempPath));
+            } catch (e) {
+              reject(e);
+            }
+          } else {
+            reject(new Error(`GitHub API returned status ${response.statusCode}`));
+          }
+        });
+      });
+      request.on('error', reject);
+      request.end();
+    });
+  });
+
+  ipcMain.on('apply-update', (_, installerPath: string) => {
+    if (installerPath && fs.existsSync(installerPath)) {
+      const child = spawn(installerPath, ['/SILENT', '/SUPPRESSMSGBOXES', '/NORESTART'], {
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+      app.quit();
+    }
   });
 });

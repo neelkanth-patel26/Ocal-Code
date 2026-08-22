@@ -57,6 +57,16 @@ export const electronAPI = {
     ipcRenderer.on('process:exit', handler);
     return () => ipcRenderer.removeListener('process:exit', handler);
   },
+
+  // Auto-Update API (Ocal Browser Pattern)
+  checkForUpdates: () => ipcRenderer.invoke('check-for-update'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  applyUpdate: (installerPath: string) => ipcRenderer.send('apply-update', installerPath),
+  onUpdateDownloadProgress: (callback: (progress: { percent: number; loaded: string; total: string }) => void) => {
+    const handler = (_: any, data: { percent: number; loaded: string; total: string }) => callback(data);
+    ipcRenderer.on('update-download-progress', handler);
+    return () => ipcRenderer.removeListener('update-download-progress', handler);
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

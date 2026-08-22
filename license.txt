@@ -1,0 +1,58 @@
+OCAL CODE STUDIO - END USER LICENSE AGREEMENT & TERMS OF SERVICE
+
+Last Updated: August 2026
+Publisher: Gaming Network Studio Media Group
+Author: Neelkanth Patel (neelkanthpatel26@outlook.com)
+Product: Ocal Code Studio
+
+PLEASE READ THIS AGREEMENT CAREFULLY BEFORE INSTALLING OR USING OCAL CODE STUDIO ("THE SOFTWARE"). BY INSTALLING, COPYING, OR USING THE SOFTWARE, YOU AGREE TO BE BOUND BY THE TERMS AND CONDITIONS AND PRIVACY POLICY SET FORTH BELOW.
+
+================================================================================
+1. GRANT OF LICENSE
+================================================================================
+Gaming Network Studio Media Group grants you a personal, worldwide, royalty-free, non-assignable, and non-exclusive license to use Ocal Code Studio for personal, educational, commercial, or enterprise software development.
+
+You may:
+- Install and use Ocal Code on any number of computers or operating systems.
+- Create, compile, run, debug, and publish applications using the built-in compilers and toolchains.
+- Distribute binaries compiled with Ocal Code freely without royalty or licensing obligations to Gaming Network Studio.
+
+================================================================================
+2. PRIVACY POLICY & DATA INTEGRITY
+================================================================================
+Ocal Code operates with a strict "Privacy First, Local First" philosophy:
+- 100% Local Code Processing: Your source code, workspace files, projects, and assets are processed strictly on your local device. We do NOT collect, upload, transmit, or inspect your source code.
+- No Telemetry or Ad Tracking: Ocal Code does not sell, trade, or transmit your private project data to third-party advertisers.
+- Update Checks: When manually or automatically checking for software updates, Ocal Code securely queries the public GitHub Releases API (https://api.github.com/repos/neelkanth-patel26/Ocal-Code) using HTTPS to compare version tags. No personal identifiable information is transmitted.
+- Local Live Server: The built-in Live Web Server binds exclusively to loopback addresses (http://localhost:5500) on your local machine and does not expose ports to public networks without explicit user configuration.
+
+================================================================================
+3. INTELLECTUAL PROPERTY & PROPRIETARY RIGHTS
+================================================================================
+All title, ownership rights, and intellectual property rights in and to Ocal Code Studio (including but not limited to branding, user interface design, Ocal Signature theme systems, bundled toolchain automation, and documentation) are owned by Gaming Network Studio Media Group and Neelkanth Patel.
+
+Third-Party Components:
+Ocal Code is built using open-source technologies including Electron, Chromium, Node.js, Monaco Editor, and GCC/MinGW-w64 toolchains. Each of these components remains subject to its respective open-source license (MIT, BSD, Apache 2.0, GPL with Runtime Exception).
+
+================================================================================
+4. SOFTWARE UPDATES
+================================================================================
+Ocal Code may periodically check for updates via GitHub Releases. Updates may include bug fixes, security patches, performance improvements, compiler enhancements, and new feature modules. You can execute and install updates at your discretion through the built-in Update Manager.
+
+================================================================================
+5. DISCLAIMER OF WARRANTIES & LIMITATION OF LIABILITY
+================================================================================
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHORS, COPYRIGHT HOLDERS, OR GAMING NETWORK STUDIO MEDIA GROUP BE LIABLE FOR ANY CLAIM, DAMAGES, LOSS OF DATA, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+================================================================================
+6. CONTACT & SUPPORT
+================================================================================
+Developer: Neelkanth Patel
+Publisher: Gaming Network Studio Media Group
+Email: neelkanthpatel26@outlook.com
+Repository: https://github.com/neelkanth-patel26/Ocal-Code
+Issues: https://github.com/neelkanth-patel26/Ocal-Code/issues
+
+BY INSTALLING OR USING OCAL CODE STUDIO, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS AGREEMENT, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS AND CONDITIONS.
