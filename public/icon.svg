@@ -4,32 +4,21 @@
 
   <!-- Clean 2D Left Bracket < -->
   <path
-    d="M 200 160 L 105 256 L 200 352"
+    d="M 230 148 L 122 256 L 230 364"
     fill="none"
     stroke="#34d058"
-    stroke-width="36"
+    stroke-width="38"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
 
   <!-- Clean 2D Right Bracket > -->
   <path
-    d="M 312 160 L 407 256 L 312 352"
+    d="M 282 148 L 390 256 L 282 364"
     fill="none"
     stroke="#34d058"
-    stroke-width="36"
+    stroke-width="38"
     stroke-linecap="round"
     stroke-linejoin="round"
-  />
-
-  <!-- Clean 2D Center Forward Slash / -->
-  <line
-    x1="285"
-    y1="145"
-    x2="227"
-    y2="367"
-    stroke="#ffffff"
-    stroke-width="36"
-    stroke-linecap="round"
   />
 </svg>
